@@ -1,0 +1,71 @@
+/* LUNA - duidingen voor de zon en de ascendant, per sterrenbeeld. */
+(function (global) {
+  'use strict';
+  var C = global.LunaContent;
+
+  C.ZON_IN_TEKEN = [
+    { kern: 'Je komt tot leven op het moment dat er iets moet beginnen.',
+      tekst: 'Wachten kost je meer energie dan doen. Je beslist snel, vaak voordat alle informatie binnen is, en meestal blijkt dat een prima ruil. Je bent op je best in het begin van dingen: het eerste gesprek, de eerste dag, de beslissing waar niemand anders zijn vingers aan brandt.',
+      kracht: 'Je durft de eerste te zijn, ook als het misgaat.',
+      valkuil: 'Zodra iets routine wordt, is je vuur eruit. Afmaken is jouw echte oefening.' },
+    { kern: 'Je komt tot leven bij wat blijft.',
+      tekst: 'Je bouwt liever iets degelijks dan iets snels. Zekerheid is voor jou geen saaiheid maar de voorwaarde om te genieten; pas als de basis staat, kun je echt ontspannen. Je bent trouw aan mensen, aan gewoontes en aan de dingen die je mooi vindt.',
+      kracht: 'Je houdt vol waar anderen halverwege afhaken.',
+      valkuil: 'Je blijft soms lang bij iets dat allang op is, alleen omdat loslaten harder voelt dan volhouden.' },
+    { kern: 'Je komt tot leven in het gesprek.',
+      tekst: 'Je denkt door te praten en begrijpt iets pas als je het aan iemand hebt uitgelegd. Je aandacht is snel en breed: je legt moeiteloos verband tussen dingen die niets met elkaar te maken lijken te hebben. Verveling is voor jou een reeel gevaar.',
+      kracht: 'Je maakt ingewikkelde dingen licht en begrijpelijk.',
+      valkuil: 'Veel beginnen, weinig verdiepen. De tweede laag ligt er wel, je duikt er alleen zelden in.' },
+    { kern: 'Je komt tot leven waar je mag zorgen.',
+      tekst: 'Je voelt aan wat er in een ruimte speelt voordat iemand iets zegt. Thuis is voor jou geen adres maar een toestand, en je maakt die toestand voor anderen. Je geheugen voor gevoel is lang: je weet nog precies hoe iets aanvoelde, ook jaren later.',
+      kracht: 'Mensen voelen zich bij jou veilig zonder dat je er moeite voor doet.',
+      valkuil: 'Als je je gekwetst voelt, trek je je terug in plaats van het te zeggen.' },
+    { kern: 'Je komt tot leven als je gezien wordt.',
+      tekst: 'Je hebt warmte te geven en dat lukt het best met publiek: een kamer, een team, een kind, iemand die geniet van wat je maakt. Je bent royaal met aandacht en complimenten, en je verwacht stilletjes hetzelfde terug.',
+      kracht: 'Je geeft anderen moed door zelf niet klein te doen.',
+      valkuil: 'Uitblijvende erkenning voelt sneller als afwijzing dan het is.' },
+    { kern: 'Je komt tot leven bij het verbeteren.',
+      tekst: 'Je ziet wat er nog net niet klopt en je hand jeukt om het recht te zetten. Je werkt zorgvuldig en zonder ophef, en je bent liever nuttig dan indrukwekkend. Kleine dingen goed doen is voor jou geen detail maar het hele punt.',
+      kracht: 'Je maakt chaos werkbaar, ook die van anderen.',
+      valkuil: 'De lat ligt bij jezelf zo hoog dat tevredenheid zelden binnen bereik komt.' },
+    { kern: 'Je komt tot leven in de ontmoeting.',
+      tekst: 'Je denkt in verhoudingen: hoe iets staat ten opzichte van iets anders, hoe het eerlijker of mooier kan. Je ziet vrijwel altijd de andere kant, en dat maakt je een goed bemiddelaar en een trage beslisser.',
+      kracht: 'Je verzacht conflict zonder de kwestie weg te poetsen.',
+      valkuil: 'Om de vrede te bewaren slik je je eigen voorkeur in, tot die er scheef uitkomt.' },
+    { kern: 'Je komt tot leven waar het echt wordt.',
+      tekst: 'Oppervlakkig contact vermoeit je meer dan een moeilijk gesprek. Je wilt weten wat er onder de beleefde laag zit, bij anderen en bij jezelf. Wat je geeft, geef je helemaal, en dat maakt vertrouwen bij jou een serieuze zaak.',
+      kracht: 'Je blijft staan in situaties waar anderen wegkijken.',
+      valkuil: 'Controle voelt als veiligheid, maar houdt precies de nabijheid tegen die je zoekt.' },
+    { kern: 'Je komt tot leven bij de horizon.',
+      tekst: 'Je wilt weten hoe het zit, in het groot: waarom mensen doen wat ze doen, wat er achter de volgende bocht ligt. Je bent eerlijk tot het botte af en je optimisme is aanstekelijk. Ruimte is voor jou een levensbehoefte, geen luxe.',
+      kracht: 'Je ziet een uitweg waar anderen alleen muren zien.',
+      valkuil: 'Beloftes zijn makkelijker gedaan dan ingepland; weggaan makkelijker dan blijven.' },
+    { kern: 'Je komt tot leven bij wat je opbouwt.',
+      tekst: 'Je speelt het lange spel. Je kunt jaren investeren zonder tussentijdse beloning, omdat je het resultaat al voor je ziet. Verantwoordelijkheid nemen komt bij jou eerder dan bij anderen, soms te vroeg.',
+      kracht: 'Je houdt vol als niemand kijkt.',
+      valkuil: 'Je draagt te veel alleen en noemt dat gewoon je werk doen.' },
+    { kern: 'Je komt tot leven een stap opzij van de massa.',
+      tekst: 'Je ziet het patroon waar anderen de details bespreken. Je hebt een eigen kompas dat je niet zomaar inruilt voor de meerderheid, en je voelt je thuis bij mensen die dat ook doen. Vrijheid is de voorwaarde voor je loyaliteit, niet het tegendeel ervan.',
+      kracht: 'Je denkt vooruit en durft ernaar te leven.',
+      valkuil: 'Als het te dichtbij komt, ga je redeneren in plaats van voelen.' },
+    { kern: 'Je komt tot leven waar de grenzen zacht zijn.',
+      tekst: 'Je neemt meer op dan je bewust registreert: stemmingen, ondertoon, wat iemand net niet zegt. Je verbeelding is een echt werktuig, geen bijzaak, en je hebt regelmatig stilte nodig om te sorteren wat van jou is en wat niet.',
+      kracht: 'Je begrijpt mensen zonder dat ze het hoeven uit te leggen.',
+      valkuil: 'Als de werkelijkheid te hard wordt, verdwijn je liever dan dat je botst.' }
+  ];
+
+  C.ASC_IN_TEKEN = [
+    'Je komt binnen met tempo. Mensen zien iemand die meteen iets vindt en niet lang om de zaak heen draait. Dat wekt vertrouwen bij wie knopen doorgehakt wil hebben, en schrik bij wie eerst wil aftasten.',
+    'Je komt binnen met rust. Je beweegt kalm, praat niet harder dan nodig en straalt uit dat je nergens haast voor hebt. Mensen ervaren je als betrouwbaar, en soms als moeilijk in beweging te krijgen.',
+    'Je komt binnen met woorden. Je stelt vragen, maakt grapjes, legt verbanden; men vindt je snel en licht gezelschap. Dat je ook een stille kant hebt, ontdekken mensen pas later.',
+    'Je komt binnen met voorzichtigheid. Je peilt eerst de sfeer voordat je jezelf laat zien, en je bent warm zodra je je veilig voelt. Anderen ervaren je als zorgzaam en een tikje gesloten.',
+    'Je komt binnen met warmte en aanwezigheid. Je wordt gezien, ook als je dat niet probeert. Mensen verwachten van je dat je de kar trekt, wat aangenaam is tot je moe bent.',
+    'Je komt binnen met opmerkzaamheid. Je let op, je helpt praktisch, je zegt niet meer dan nodig. Anderen ervaren je als bescheiden en scherp, en onderschatten je regelmatig.',
+    'Je komt binnen met charme en afweging. Je zoekt de toon die past en maakt het aangenaam om je heen. Men vindt je innemend, en merkt pas laat wat jij er zelf van vindt.',
+    'Je komt binnen met gereserveerde intensiteit. Je zegt weinig en kijkt veel. Mensen voelen dat er meer is, en reageren daar sterk op: aantrekking of afstand, zelden lauw.',
+    'Je komt binnen met open vizier. Je bent recht voor zijn raap, enthousiast en makkelijk in de omgang. Anderen ervaren je als vrij en soms als moeilijk vast te houden.',
+    'Je komt binnen met terughoudende degelijkheid. Je maakt de indruk van iemand die weet wat hij doet, ook als je van binnen twijfelt. Men geeft je snel verantwoordelijkheid.',
+    'Je komt binnen als iemand die net iets anders is. Vriendelijk maar op afstand, betrokken maar niet meegezogen. Mensen vinden je origineel en moeilijk te plaatsen.',
+    'Je komt binnen zonder harde randen. Je past je aan aan de sfeer, luistert meer dan je spreekt en laat een zachte indruk achter. Anderen vertellen je snel dingen die ze niet van plan waren te vertellen.'
+  ];
+})(typeof window !== 'undefined' ? window : globalThis);
