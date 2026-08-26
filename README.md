@@ -1,2 +1,2 @@
-# Lunar-Astro
+# Luna-Astro
 Persoonlijke astrologie
