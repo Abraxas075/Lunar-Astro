@@ -511,7 +511,16 @@
       });
     }
 
-    if (punten.asc) {
+    if (opties.huizen && opties.huizen.length === 12) {
+      // Aangeleverde cuspen, bijvoorbeeld Placidus uit een ander programma.
+      res.huizen = opties.huizen.map(norm360);
+      res.eigenHuizen = true;
+      if (!punten.asc) { zetPunt(punten, 'asc', res.huizen[0]); namen.push('asc'); }
+      if (!punten.mc) { zetPunt(punten, 'mc', res.huizen[9]); namen.push('mc'); }
+      Object.keys(punten).forEach(function (k) {
+        punten[k].huis = houseOf(punten[k].lon, res.huizen);
+      });
+    } else if (punten.asc) {
       res.huizen = houses(punten.asc.lon);
       Object.keys(punten).forEach(function (k) {
         punten[k].huis = houseOf(punten[k].lon, res.huizen);

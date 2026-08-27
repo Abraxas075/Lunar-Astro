@@ -65,6 +65,30 @@ externe bibliotheken en geen API's.
 Voor astrologie gaat het om graden en tekens, niet om boogseconden; deze
 nauwkeurigheid is daarvoor ruim voldoende.
 
+### Nagemeten tegen Astrodienst
+
+Een geboortehoroscoop van 14 januari 2003, 21:12 in Zaandam, naast dezelfde
+horoscoop van Astrodienst:
+
+| | afwijking | | afwijking |
+| --- | --- | --- | --- |
+| Zon | 1″ | Jupiter | 2″ |
+| Maan | 2″ | **Saturnus** | **9,5′** |
+| Mercurius | 18″ | Uranus | 17″ |
+| Venus | 20″ | Neptunus | 14″ |
+| Mars | 59″ | Pluto | 32″ |
+| Maansknoop | 10″ | Ascendant | 8″ |
+| Midhemel | 12″ | | |
+
+Op Saturnus na blijft alles binnen een boogminuut, en zon, maan en ascendant
+binnen een paar boogseconden.
+
+**Saturnus is de uitzondering** en kan er tot ongeveer 10 boogminuten naast
+zitten. Dat is een bekende grens van de gebruikte Keplerelementen: die vangen
+de wisselwerking tussen Jupiter en Saturnus niet volledig. Voor een teken of
+een aspect maakt een zesde graad niets uit, maar staat Saturnus in jouw
+horoscoop vlak bij een tekengrens, lever dan je eigen waarde aan.
+
 Een paar details die makkelijk misgaan en hier wel goed staan:
 
 * **Tijdzones.** Je kloktijd wordt via de IANA-tijdzonedatabase van je browser
@@ -142,8 +166,24 @@ Voor een horoscoop, één regel per lichaam:
 
 Namen mogen Nederlands of Engels zijn (`maan`/`moon`, `knoop`/`true node`,
 `asc`/`ascendant`/`AC`), tekens voluit of als afkorting (`Schorpioen`, `Sco`,
-`♏`). Een `R` of `Rx` markeert retrograde. Regels die niet herkend worden,
-worden overgeslagen en genoemd.
+`♏`). Een `R` of `Rx` markeert retrograde, ook als die tegen de seconden aan
+staat geplakt. Regels die niet herkend worden, worden overgeslagen en genoemd.
+
+De standentabel van Astrodienst kun je zo overnemen:
+
+    Zon        ♑ 24° 14' 43"
+    Maan       ♊ 11° 15' 41"
+    Mercurius  ♑ 17° 18' 38"r
+    M.knoop/gemid. ♊ 6° 17' 48"
+    AC: ♍10° 18' 43"   2: ♎ 1° 20'   3: ♎28° 49'
+    MC: ♊ 3° 42' 13"  11: ♋11° 47'  12: ♌14° 22'
+
+### Huiscuspen
+
+Geef je huiscuspen mee, dan gebruikt LUNA het huizensysteem van jouw bron in
+plaats van hele-tekenhuizen. Meerdere cuspen op één regel mag. Zes is genoeg —
+uit huis 1, 2, 3, 10, 11 en 12 leidt LUNA de andere zes af, want die liggen er
+recht tegenover.
 
 Voor een tabel, met een kopregel:
 

@@ -78,7 +78,7 @@
   }
 
   function isRetro(s) {
-    return /(^|[\s,;(\[])(r|rx|retro|retrograde|℞)([\s,;)\].]|$)/i.test(' ' + s + ' ');
+    return /(^|[\s,;(\["'\u2032\u2033])(r|rx|retro|retrograde|\u211e)([\s,;)\].]|$)/i.test(' ' + s + ' ');
   }
 
   function vindLichaam(regel) {
@@ -216,10 +216,63 @@
     return { fout: 'JSON moet een veld "punten" (een horoscoop) of "rijen" (een tabel) bevatten.' };
   }
 
+  /* Huiscuspen staan vaak met meerdere op een regel:
+     "AC: 10 Vir 18   2: 1 Lib 20   3: 28 Lib 49". Deze functie hakt zo'n regel
+     in stukken bij elk label en leest ze los van elkaar. */
+  var CUSP_LABEL = /(^|[\s|,;])(ac|asc|mc|1[0-2]|[1-9])\s*:/g;
+
+  function leesCuspen(regel) {
+    CUSP_LABEL.lastIndex = 0;
+    var treffers = [], m;
+    while ((m = CUSP_LABEL.exec(regel))) {
+      treffers.push({ label: m[2], start: m.index + m[0].length });
+    }
+    if (!treffers.length) return null;
+    var uit = [];
+    treffers.forEach(function (t, i) {
+      var eind = i + 1 < treffers.length ? treffers[i + 1].start - treffers[i + 1].label.length - 1
+                                         : regel.length;
+      var w = leesLengte(regel.slice(t.start, Math.max(eind, t.start)));
+      if (!w) return;
+      var nummer = t.label === 'ac' || t.label === 'asc' ? 1
+                 : t.label === 'mc' ? 10 : parseInt(t.label, 10);
+      uit.push({ nummer: nummer, lon: w.lon });
+    });
+    return uit.length ? uit : null;
+  }
+
+  /* Uit een halve set cuspen valt de rest af te leiden: huis 7 ligt tegenover
+     huis 1, huis 8 tegenover 2, enzovoort. Pas bij een volledige set van twaalf
+     geven we ze terug; anders blijven het hele-tekenhuizen. */
+  function maakHuizen(cuspen) {
+    var uit = [];
+    for (var n = 1; n <= 12; n++) {
+      if (typeof cuspen[n] === 'number') {
+        uit.push(A.norm360(cuspen[n]));
+      } else {
+        var tegenover = cuspen[n <= 6 ? n + 6 : n - 6];
+        if (typeof tegenover !== 'number') return null;
+        uit.push(A.norm360(tegenover + 180));
+      }
+    }
+    return uit;
+  }
+
   function parseHoroscoop(regels) {
-    var punten = {}, overgeslagen = [];
+    var punten = {}, overgeslagen = [], cuspen = {};
     regels.forEach(function (regel) {
       var s = schoon(regel);
+
+      var gevondenCuspen = leesCuspen(s);
+      if (gevondenCuspen) {
+        gevondenCuspen.forEach(function (c) {
+          cuspen[c.nummer] = c.lon;
+          if (c.nummer === 1) punten.asc = { lon: c.lon, retrograde: false };
+          if (c.nummer === 10) punten.mc = { lon: c.lon, retrograde: false };
+        });
+        return;
+      }
+
       var gevonden = vindLichaam(s);
       if (!gevonden) { overgeslagen.push(regel); return; }
       var w = leesLengte(gevonden.rest);
@@ -227,10 +280,15 @@
       if (isRetro(s)) w.retrograde = true;
       punten[gevonden.lichaam] = w;
     });
+
     if (!Object.keys(punten).length) {
-      return { fout: 'Geen standen herkend. Verwacht regels als: Zon 1°03\' Schorpioen' };
+      return { fout: 'Geen standen herkend. Verwacht regels als: Zon 1\u00b003\u2032 Schorpioen' };
     }
-    return { type: 'horoscoop', punten: punten, overgeslagen: overgeslagen };
+
+    return {
+      type: 'horoscoop', punten: punten, overgeslagen: overgeslagen,
+      huizen: maakHuizen(cuspen), cuspen: Object.keys(cuspen).length
+    };
   }
 
   function parseTabel(regels, scheiding, tz) {
@@ -384,8 +442,16 @@
           punten[naam] = w;
         }
       });
+      var huizen = null;
+      if (h.huizen && h.huizen.length === 12) {
+        huizen = h.huizen.map(function (c) {
+          var w = leesLengte(c);
+          return w ? w.lon : null;
+        });
+        if (huizen.indexOf(null) >= 0) huizen = null;
+      }
       return { id: 'bestand-h' + i, voor: h.voor || '', bron: h.bron || 'ephemeride.js',
-               punten: punten, vast: true };
+               punten: punten, huizen: huizen, vast: true };
     }).filter(function (h) { return Object.keys(h.punten).length; });
 
     var tabellen = (b.tabellen || []).map(function (t, i) {
@@ -421,6 +487,11 @@
   function overschrijfVoor(naam) {
     var h = horoscoopVoor(naam);
     return h ? h.punten : null;
+  }
+
+  function huizenVoor(naam) {
+    var h = horoscoopVoor(naam);
+    return h && h.huizen && h.huizen.length === 12 ? h.huizen : null;
   }
 
   /* ---------- bron voor astro.js ---------- */
@@ -473,9 +544,10 @@
     return 'e' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
   }
 
-  function voegHoroscoopToe(punten, voor, bron) {
+  function voegHoroscoopToe(punten, voor, bron, huizen) {
     var vermelding = { id: idNieuw(), voor: voor || '', bron: bron || '',
-                       punten: punten, aangemaakt: new Date().toISOString() };
+                       punten: punten, huizen: huizen || null,
+                       aangemaakt: new Date().toISOString() };
     opslag.horoscopen.push(vermelding);
     var r = bewaren();
     return r.ok ? vermelding : r;
@@ -539,6 +611,7 @@
     parse: parse, leesLengte: leesLengte, leesDatum: leesDatum,
     interpoleer: interpoleer,
     alles: alles, horoscoopVoor: horoscoopVoor, overschrijfVoor: overschrijfVoor,
+    huizenVoor: huizenVoor, leesCuspen: leesCuspen,
     vergelijk: vergelijk, bouwBron: bouwBron,
     voegHoroscoopToe: voegHoroscoopToe, voegTabelToe: voegTabelToe,
     verwijder: verwijder, wisAlles: wisAlles,

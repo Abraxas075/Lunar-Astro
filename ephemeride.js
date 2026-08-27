@@ -24,6 +24,10 @@
  * Geef je alleen "asc" op, dan krijg je een ascendant en huizen ook zonder
  * dat je geboortetijd bekend is.
  *
+ * Met het veld "huizen" (twaalf cuspen, te beginnen bij huis 1) gebruik je het
+ * huizensysteem van je eigen bron, bijvoorbeeld Placidus. Zonder dat veld
+ * rekent LUNA met hele-tekenhuizen.
+ *
  * ------------------------------------------------------------------
  * 2. TABELLEN - standen over een reeks datums
  * ------------------------------------------------------------------
@@ -62,7 +66,13 @@ window.LunaEphemeride = {
     //     knoop:     "29°38' Waterman",
     //     asc:       "6°23' Tweelingen",
     //     mc:        "1°46' Waterman"
-    //   }
+    //   },
+    //   huizen: [
+    //     "6°23' Tweelingen", "1°20' Kreeft",  "28°49' Kreeft",
+    //     "1°46' Waterman",  "11°47' Waterman", "14°22' Vissen",
+    //     "6°23' Boogschutter", "1°20' Steenbok", "28°49' Steenbok",
+    //     "1°46' Leeuw",     "11°47' Leeuw",   "14°22' Maagd"
+    //   ]
     // }
   ],
 

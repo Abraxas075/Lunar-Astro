@@ -125,7 +125,8 @@
       jd: A.jdFromDate(moment),
       lat: plaats.lat, lon: plaats.lon,
       tijdBekend: !!gegevens.tijdBekend,
-      overschrijf: E ? E.overschrijfVoor(gegevens.naam) : null
+      overschrijf: E ? E.overschrijfVoor(gegevens.naam) : null,
+      huizen: E ? E.huizenVoor(gegevens.naam) : null
     });
   }
 
@@ -148,6 +149,7 @@
   function eigenMerk(chart) {
     var stukken = [];
     if (chart && chart.overschreven) stukken.push('eigen standen');
+    if (chart && chart.eigenHuizen) stukken.push('eigen huizen');
     if (A.heeftBron()) stukken.push('eigen tabel');
     if (!stukken.length) return '';
     return '<a href="#/eigen-data" class="chip neutraal" style="text-decoration:none;cursor:pointer">' +
@@ -635,7 +637,9 @@
       esc(datumKort(new Date(staat.profiel.datum))) + ' ' + new Date(staat.profiel.datum).getFullYear() +
       (staat.profiel.tijdBekend ? ' · ' + esc(staat.profiel.tijd) : '') +
       ' · ' + esc(staat.profiel.plaats.naam) + '</p>' +
-      (natal.huizen ? '<p class="hint">Huizen volgens het hele-tekensysteem: elk huis beslaat precies een sterrenbeeld, ' +
+      (natal.eigenHuizen
+        ? '<p class="hint">Huizen volgens de cuspen die je zelf hebt aangeleverd.</p>'
+        : natal.huizen ? '<p class="hint">Huizen volgens het hele-tekensysteem: elk huis beslaat precies een sterrenbeeld, ' +
         'te beginnen bij je ascendant.</p>'
         : '<p class="hint">Zonder geboortetijd geen ascendant, midhemel of huizen. ' +
           'Vul je tijd aan in je profiel als je die alsnog vindt.</p>') +
@@ -1221,6 +1225,16 @@
               : '<span class="gedempt"> \u00b7 LUNA ' + esc(D.graadTekst(r.berekend)) + '</span>') +
             '</div></div>';
         }).join('') + '</div>' +
+        (eigenVoorbeeld.huizen
+          ? '<div class="rij" style="gap:10px;align-items:flex-start">' +
+            '<span class="goud">' + ico('home', 'icoon-klein') + '</span>' +
+            '<p class="body-sm zacht">Ook twaalf huiscuspen gevonden. LUNA gebruikt normaal ' +
+            'hele-tekenhuizen; met jouw cuspen rekent hij voortaan met die van jouw bron.</p></div>'
+          : eigenVoorbeeld.cuspen
+            ? '<p class="hint">' + eigenVoorbeeld.cuspen + ' huiscuspen gevonden, maar te weinig ' +
+              'voor een volledige set. Geef ten minste huis 1, 2, 3, 10, 11 en 12; de rest leidt ' +
+              'LUNA daaruit af.</p>'
+            : '') +
         (eigenVoorbeeld.overgeslagen && eigenVoorbeeld.overgeslagen.length
           ? '<p class="hint">Overgeslagen regels: ' +
             esc(eigenVoorbeeld.overgeslagen.slice(0, 4).join(' · ')) +
@@ -1278,7 +1292,8 @@
         '<span class="body-sm gedempt">' + esc(soort === 'tabel'
           ? item.lichamen.length + ' lichamen · ' + item.aantal + ' standen · ' +
             (item.tz && item.tz !== 'UTC' ? item.tz : 'wereldtijd')
-          : Object.keys(item.punten).length + ' standen' + (item.bron ? ' · ' + item.bron : '')) +
+          : Object.keys(item.punten).length + ' standen' +
+            (item.huizen ? ' + huizen' : '') + (item.bron ? ' · ' + item.bron : '')) +
         (item.vast ? ' · uit ephemeride.js' : '') + '</span></div>' +
         (item.vast ? '<span class="chip">vast</span>'
           : '<button class="knop knop-spook" style="padding:6px 12px" data-actie="eigen-verwijder" ' +
@@ -1631,7 +1646,7 @@
     else if (actie === 'eigen-opslaan') {
       var r;
       if (eigenVoorbeeld.type === 'horoscoop') {
-        r = E.voegHoroscoopToe(eigenVoorbeeld.punten, eigenVoor, eigenBron);
+        r = E.voegHoroscoopToe(eigenVoorbeeld.punten, eigenVoor, eigenBron, eigenVoorbeeld.huizen);
       } else {
         r = E.voegTabelToe(eigenVoorbeeld, eigenBron);
       }
