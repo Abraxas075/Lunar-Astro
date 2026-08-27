@@ -132,8 +132,11 @@
     return { lon: A.norm360(g[0]), retrograde: isRetro(s) };
   }
 
-  /* Datum uit een cel: 1990-10-24, 24-10-1990 of 24/10/1990, eventueel met tijd. */
-  function leesDatum(waarde) {
+  /* Datum uit een cel: 1990-10-24, 24-10-1990 of 24/10/1990, eventueel met tijd.
+     Zonder tijdzone wordt de cel als wereldtijd gelezen. Geef je er een mee, dan
+     staat er lokale kloktijd en rekenen we hem om; zomertijd gaat vanzelf goed,
+     want de omrekening gebruikt de tijdzonegegevens van de browser. */
+  function leesDatum(waarde, tz) {
     var s = String(waarde || '').trim();
     var m = s.match(/^(\d{4})[-\/.](\d{1,2})[-\/.](\d{1,2})(?:[ T](\d{1,2}):(\d{2}))?/);
     var jaar, maand, dag, uur = 0, minuut = 0;
@@ -145,24 +148,29 @@
       dag = +m[1]; maand = +m[2]; jaar = +m[3]; uur = +(m[4] || 0); minuut = +(m[5] || 0);
     }
     if (maand < 1 || maand > 12 || dag < 1 || dag > 31) return null;
-    var d = new Date(Date.UTC(2000, maand - 1, dag, uur, minuut, 0));
-    d.setUTCFullYear(jaar);
-    return { datum: d, jd: A.jdFromDate(d) };
+    var d;
+    if (tz && tz !== 'UTC') {
+      d = A.zonedTimeToUTC(jaar, maand, dag, uur, minuut, tz);
+    } else {
+      d = new Date(Date.UTC(2000, maand - 1, dag, uur, minuut, 0));
+      d.setUTCFullYear(jaar);
+    }
+    return { datum: d, jd: A.jdFromDate(d), tz: tz || 'UTC' };
   }
 
   /* ---------- inlezen ---------- */
 
-  function parse(tekst) {
+  function parse(tekst, tz) {
     var ruw = String(tekst || '').trim();
     if (!ruw) return { fout: 'Er is niets ingevuld.' };
 
-    if (ruw.charAt(0) === '{' || ruw.charAt(0) === '[') return parseJSON(ruw);
+    if (ruw.charAt(0) === '{' || ruw.charAt(0) === '[') return parseJSON(ruw, tz);
 
     var regels = ruw.split(/\r?\n/).map(function (r) { return r.trim(); }).filter(Boolean);
     var scheiding = kiesScheidingsteken(regels[0]);
     if (scheiding && leesDatum(regels[0].split(scheiding)[0]) === null &&
         regels.length > 1 && leesDatum(regels[1].split(scheiding)[0])) {
-      return parseTabel(regels, scheiding);
+      return parseTabel(regels, scheiding, tz);
     }
     if (scheiding && leesDatum(regels[0].split(scheiding)[0])) {
       return { fout: 'Een tabel heeft een kopregel nodig met de namen van de lichamen, ' +
@@ -181,7 +189,7 @@
     return null;
   }
 
-  function parseJSON(ruw) {
+  function parseJSON(ruw, tz) {
     var obj;
     try { obj = JSON.parse(ruw); }
     catch (e) { return { fout: 'Dit is geen geldige JSON: ' + e.message }; }
@@ -203,7 +211,7 @@
       return { type: 'horoscoop', punten: punten, bron: obj.bron || '', voor: obj.voor || '' };
     }
     if (obj && obj.rijen) {
-      return uitRijen(obj.rijen, obj.bron || '');
+      return uitRijen(obj.rijen, obj.bron || '', obj.tz || tz);
     }
     return { fout: 'JSON moet een veld "punten" (een horoscoop) of "rijen" (een tabel) bevatten.' };
   }
@@ -225,7 +233,7 @@
     return { type: 'horoscoop', punten: punten, overgeslagen: overgeslagen };
   }
 
-  function parseTabel(regels, scheiding) {
+  function parseTabel(regels, scheiding, tz) {
     var kop = regels[0].split(scheiding).map(function (c) { return schoon(c); });
     var kolommen = kop.map(function (c, i) {
       if (i === 0) return null;
@@ -234,29 +242,38 @@
     if (!kolommen.filter(Boolean).length) {
       return { fout: 'Geen bekende lichamen in de kopregel. Gebruik namen als zon, maan, mercurius.' };
     }
-    var rijen = [], fouten = 0;
+    var rijen = [], fouten = 0, celFouten = 0, voorbeeldFout = '';
     for (var i = 1; i < regels.length; i++) {
       var cellen = regels[i].split(scheiding);
-      var d = leesDatum(cellen[0]);
+      var d = leesDatum(cellen[0], tz);
       if (!d) { fouten++; continue; }
       var waarden = {};
       for (var k = 1; k < cellen.length; k++) {
         if (!kolommen[k]) continue;
         var w = leesLengte(cellen[k]);
-        if (w) waarden[kolommen[k]] = w.lon;
+        if (w) {
+          waarden[kolommen[k]] = w.lon;
+        } else if (String(cellen[k]).trim()) {
+          // Een gevulde cel die niet te lezen is, mag niet zomaar verdwijnen.
+          celFouten++;
+          if (!voorbeeldFout) voorbeeldFout = String(cellen[k]).trim().slice(0, 24);
+        }
       }
       if (Object.keys(waarden).length) rijen.push({ jd: d.jd, w: waarden });
     }
     if (!rijen.length) return { fout: 'Geen bruikbare regels gevonden onder de kopregel.' };
-    var res = uitRijen(rijen, '');
+    var res = uitRijen(rijen, '', tz);
     res.fouteRegels = fouten;
+    res.foutieveCellen = celFouten;
+    res.voorbeeldFout = voorbeeldFout;
+    res.eersteCel = regels[1].split(scheiding)[0].trim();
     return res;
   }
 
-  function uitRijen(rijen, bron) {
+  function uitRijen(rijen, bron, tz) {
     var reeksen = {};
     rijen.forEach(function (rij) {
-      var jd = typeof rij.jd === 'number' ? rij.jd : (leesDatum(rij.datum) || {}).jd;
+      var jd = typeof rij.jd === 'number' ? rij.jd : (leesDatum(rij.datum, tz) || {}).jd;
       if (typeof jd !== 'number') return;
       var w = rij.w || rij.waarden || rij;
       Object.keys(w).forEach(function (k) {
@@ -279,7 +296,7 @@
     });
     return {
       type: 'tabel', reeksen: reeksen, lichamen: lichamen, bron: bron,
-      aantal: aantal, van: van, tot: tot
+      tz: tz || 'UTC', aantal: aantal, van: van, tot: tot
     };
   }
 
@@ -372,7 +389,7 @@
     }).filter(function (h) { return Object.keys(h.punten).length; });
 
     var tabellen = (b.tabellen || []).map(function (t, i) {
-      var res = uitRijen(t.rijen || [], t.bron || 'ephemeride.js');
+      var res = uitRijen(t.rijen || [], t.bron || 'ephemeride.js', t.tz);
       if (res.fout) return null;
       res.id = 'bestand-t' + i;
       res.vast = true;
@@ -467,8 +484,8 @@
   function voegTabelToe(tabel, bron) {
     var vermelding = {
       id: idNieuw(), bron: bron || tabel.bron || '', reeksen: tabel.reeksen,
-      lichamen: tabel.lichamen, aantal: tabel.aantal, van: tabel.van, tot: tabel.tot,
-      aangemaakt: new Date().toISOString()
+      lichamen: tabel.lichamen, tz: tabel.tz || 'UTC', aantal: tabel.aantal,
+      van: tabel.van, tot: tabel.tot, aangemaakt: new Date().toISOString()
     };
     opslag.tabellen.push(vermelding);
     var r = bewaren();

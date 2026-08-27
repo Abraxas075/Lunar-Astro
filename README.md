@@ -155,8 +155,19 @@ Komma's, puntkomma's en tabs werken alle drie als scheidingsteken. Datums mogen
 `2026-08-25` of `25-08-2026` zijn, eventueel met tijd erachter. De cellen mogen
 kommagetallen zijn of dezelfde schrijfwijze als hierboven.
 
-**Let op:** alle lengtes zijn ecliptische lengtes in graden vanaf 0° Ram, en
-alle datums en tijden zijn wereldtijd (UT), niet je eigen kloktijd.
+### Tijdzone van een tabel
+
+Ephemeride-bestanden staan lang niet altijd in wereldtijd. Staan jouw datums op
+middernacht in je eigen tijdzone, kies die zone dan in het keuzeveld boven de
+knop *Inlezen en controleren*, of zet `tz: 'Europe/Amsterdam'` op de tabel in
+`ephemeride.js`. Zomer- en wintertijd worden vanzelf goed verrekend.
+
+Het loont om dit te controleren: een uur verschil is bij de maan al ongeveer
+een halve graad. Na het inlezen toont de app daarom een controleregel — *"2026-08-25
+in Europe/Amsterdam is 24 aug 2026 22:00 wereldtijd"* — zodat je in één oogopslag
+ziet of de omrekening klopt.
+
+**Let op:** alle lengtes zijn ecliptische lengtes in graden vanaf 0° Ram.
 
 Waar met eigen gegevens gerekend wordt, staat dat in de app met een klein
 merkteken boven het scherm.

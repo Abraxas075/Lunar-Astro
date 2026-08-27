@@ -75,6 +75,14 @@
     return datumKort(d) + ' ' + String(d.getHours()).padStart(2, '0') + ':' +
            String(d.getMinutes()).padStart(2, '0');
   }
+  /* Hetzelfde, maar in wereldtijd. De gewone versie geeft de tijd van het
+     apparaat; bij een controle op UT zou dat de vraag ontwijken. */
+  function datumTijdUTC(d) {
+    return d.getUTCDate() + ' ' + MAANDEN_KORT[d.getUTCMonth()] + ' ' +
+           d.getUTCFullYear() + ' ' +
+           String(d.getUTCHours()).padStart(2, '0') + ':' +
+           String(d.getUTCMinutes()).padStart(2, '0');
+  }
   function groet(d) {
     var u = d.getHours();
     if (u < 6) return 'Goedenacht';
@@ -1150,6 +1158,15 @@
   var eigenTekst = '';
   var eigenVoor = '';
   var eigenBron = '';
+  var eigenTz = eigenStandaardTz();
+
+  /* Tabellen staan meestal in de tijdzone waarin ze gemaakt zijn, niet in
+     wereldtijd. Een uur verschil is bij de maan al een halve graad, dus dit
+     is een expliciete keuze en geen stille aanname. */
+  function eigenStandaardTz() {
+    try { return Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'; }
+    catch (e) { return 'UTC'; }
+  }
 
   function eigenNamen() {
     var namen = [];
@@ -1225,9 +1242,25 @@
         A.dateFromJD(eigenVoorbeeld.van).getFullYear() + ' tot ' +
         esc(datumKort(A.dateFromJD(eigenVoorbeeld.tot))) + ' ' +
         A.dateFromJD(eigenVoorbeeld.tot).getFullYear() + '.</p>' +
+        (eigenVoorbeeld.eersteCel
+          ? '<div class="rij" style="gap:10px;align-items:flex-start">' +
+            '<span class="goud">' + ico('clock', 'icoon-klein') + '</span>' +
+            '<p class="body-sm zacht">Controle: <strong>' + esc(eigenVoorbeeld.eersteCel) +
+            '</strong> in ' + esc(eigenVoorbeeld.tz === 'UTC' ? 'wereldtijd' : eigenVoorbeeld.tz) +
+            ' is ' + esc(datumTijdUTC(A.dateFromJD(eigenVoorbeeld.van))) + ' wereldtijd. ' +
+            'Klopt dat niet, kies dan een andere tijdzone.</p></div>'
+          : '') +
         (eigenVoorbeeld.fouteRegels
           ? '<p class="hint">' + eigenVoorbeeld.fouteRegels + ' regels overgeslagen omdat de datum ' +
             'niet te lezen was.</p>' : '') +
+        (eigenVoorbeeld.foutieveCellen
+          ? '<div class="rij" style="gap:10px;align-items:flex-start">' +
+            '<span style="color:var(--rose)">' + ico('warning', 'icoon-klein') + '</span>' +
+            '<p class="body-sm zacht">' + eigenVoorbeeld.foutieveCellen + ' waarden overgeslagen ' +
+            'omdat ze niet te lezen waren' +
+            (eigenVoorbeeld.voorbeeldFout ? ', bijvoorbeeld "' + esc(eigenVoorbeeld.voorbeeldFout) + '"' : '') +
+            '. Een lengte moet tussen 0 en 360 graden liggen.</p></div>'
+          : '') +
         (eigenVoorbeeld.aantal > 50000
           ? '<p class="hint">Dit is een grote tabel. Past hij niet in de opslag van je browser, ' +
             'zet hem dan in ephemeride.js.</p>' : '') +
@@ -1243,7 +1276,8 @@
           ? (item.bron || 'Tabel')
           : (item.voor || 'Zonder naam')) + '</strong>' +
         '<span class="body-sm gedempt">' + esc(soort === 'tabel'
-          ? item.lichamen.length + ' lichamen · ' + item.aantal + ' standen'
+          ? item.lichamen.length + ' lichamen · ' + item.aantal + ' standen · ' +
+            (item.tz && item.tz !== 'UTC' ? item.tz : 'wereldtijd')
           : Object.keys(item.punten).length + ' standen' + (item.bron ? ' · ' + item.bron : '')) +
         (item.vast ? ' · uit ephemeride.js' : '') + '</span></div>' +
         (item.vast ? '<span class="chip">vast</span>'
@@ -1274,6 +1308,16 @@
       '<div class="veld"><label for="v-eigen-bron">Waar komt het vandaan (optioneel)</label>' +
       '<input id="v-eigen-bron" data-veld="eigenBron" value="' + esc(eigenBron) + '" ' +
       'placeholder="Bijvoorbeeld: Swiss Ephemeris, of Astrodienst"></div>' +
+
+      '<div class="veld"><label for="v-eigen-tz">In welke tijd staan de datums (alleen bij een tabel)</label>' +
+      '<select id="v-eigen-tz" data-veld="eigenTz">' +
+      '<option value="UTC"' + (eigenTz === 'UTC' ? ' selected' : '') + '>Wereldtijd (UT)</option>' +
+      tijdzoneOpties(eigenTz === 'UTC' ? eigenStandaardTz() : eigenTz)
+        .replace('<option value="UTC">UTC</option>', '')
+        .replace('<option value="UTC" selected>UTC</option>', '') +
+      '</select>' +
+      '<span class="hint">Staan je datums op middernacht in je eigen tijdzone, kies dan die zone. ' +
+      'Zomer- en wintertijd worden vanzelf verrekend.</span></div>' +
 
       '<div class="rij" style="gap:10px">' +
       '<button class="knop knop-primair" data-actie="eigen-lezen">Inlezen en controleren</button>' +
@@ -1575,7 +1619,7 @@
     }
 
     else if (actie === 'eigen-lezen') {
-      eigenVoorbeeld = E.parse(eigenTekst);
+      eigenVoorbeeld = E.parse(eigenTekst, eigenTz);
       render();
     }
 
@@ -1663,6 +1707,12 @@
   scherm.addEventListener('change', function (e) {
     if (e.target.dataset.veld === 'eigenVoor') {
       eigenVoor = e.target.value;
+      render();
+      return;
+    }
+    if (e.target.dataset.veld === 'eigenTz') {
+      eigenTz = e.target.value;
+      if (eigenVoorbeeld && !eigenVoorbeeld.fout) eigenVoorbeeld = E.parse(eigenTekst, eigenTz);
       render();
       return;
     }

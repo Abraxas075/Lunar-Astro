@@ -34,6 +34,12 @@
  *
  * Buiten het bereik van je tabel rekent de app weer met haar eigen formules,
  * en ook lichamen die niet in de tabel staan worden gewoon berekend.
+ *
+ * Staan de datums niet in wereldtijd maar in je eigen kloktijd, zet dan een
+ * veld "tz" op de tabel, bijvoorbeeld tz: 'Europe/Amsterdam'. Zomer- en
+ * wintertijd worden dan vanzelf goed verrekend. Laat je "tz" weg, dan worden
+ * de datums als wereldtijd gelezen. Een uur verschil is bij de maan al een
+ * halve graad, dus het loont om dit te controleren.
  */
 
 window.LunaEphemeride = {
@@ -62,7 +68,8 @@ window.LunaEphemeride = {
 
   tabellen: [
     // {
-    //   bron: 'Swiss Ephemeris, dagelijks om 00:00 UT',
+    //   bron: 'Swiss Ephemeris, dagelijks om middernacht',
+    //   tz: 'Europe/Amsterdam',
     //   rijen: [
     //     { datum: '2026-08-25', w: { zon: 152.19, maan: 295.42, mars: 99.20 } },
     //     { datum: '2026-08-26', w: { zon: 153.17, maan: 308.31, mars: 99.84 } },
