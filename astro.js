@@ -253,7 +253,28 @@
   var BODIES = ['zon', 'maan', 'mercurius', 'venus', 'mars', 'jupiter',
                 'saturnus', 'uranus', 'neptunus', 'pluto', 'knoop'];
 
+  /* Eigen gegevens gaan voor op de formules.
+     Een bron is een functie (naam, jd) die {lon: graden} teruggeeft, of null
+     wanneer zij die stand niet kent; dan rekenen we hem gewoon zelf uit.
+     De bron moet aaneengesloten zijn over het bereik dat zij dekt, want de
+     snelheid wordt bepaald uit de stand een halve dag eerder en later. */
+  var _bron = null;
+
+  function zetBron(fn) { _bron = typeof fn === 'function' ? fn : null; }
+  function heeftBron() { return !!_bron; }
+
   function bodyPosition(name, jd) {
+    if (_bron) {
+      var eigen = _bron(name, jd);
+      if (eigen && typeof eigen.lon === 'number' && !isNaN(eigen.lon)) {
+        return {
+          lon: norm360(eigen.lon),
+          lat: typeof eigen.lat === 'number' ? eigen.lat : 0,
+          dist: typeof eigen.dist === 'number' ? eigen.dist : 0,
+          eigen: true
+        };
+      }
+    }
     if (name === 'zon') return sunPosition(jd);
     if (name === 'maan') return moonPosition(jd);
     if (name === 'knoop') return nodePosition(jd);
@@ -281,7 +302,8 @@
         snelheid: v,
         retrograde: v < 0,
         teken: Math.floor(p.lon / 30),
-        graad: p.lon % 30
+        graad: p.lon % 30,
+        eigen: !!p.eigen
       };
     });
     return out;
@@ -444,6 +466,26 @@
 
   /* ---------- horoscoop ---------- */
 
+  /* Zet een punt op een opgegeven lengte, ongeacht wat de formules zeggen. */
+  function zetPunt(punten, naam, waarde) {
+    var lon = typeof waarde === 'number' ? waarde : (waarde && waarde.lon);
+    if (typeof lon !== 'number' || isNaN(lon)) return false;
+    lon = norm360(lon);
+    var p = punten[naam] || (punten[naam] = {
+      naam: naam, lat: 0, dist: 0, snelheid: 0, retrograde: false
+    });
+    p.lon = lon;
+    p.teken = Math.floor(lon / 30);
+    p.graad = lon % 30;
+    p.eigen = true;
+    if (waarde && typeof waarde === 'object') {
+      if (typeof waarde.retrograde === 'boolean') p.retrograde = waarde.retrograde;
+      if (typeof waarde.lat === 'number') p.lat = waarde.lat;
+      if (typeof waarde.snelheid === 'number') p.snelheid = waarde.snelheid;
+    }
+    return true;
+  }
+
   function chart(opties) {
     var jd = opties.jd;
     var punten = positions(jd);
@@ -456,8 +498,21 @@
                      teken: Math.floor(am.asc / 30), graad: am.asc % 30 };
       punten.mc = { naam: 'mc', lon: am.mc, lat: 0, snelheid: 0, retrograde: false,
                     teken: Math.floor(am.mc / 30), graad: am.mc % 30 };
-      res.huizen = houses(am.asc);
       namen = namen.concat(['asc', 'mc']);
+    }
+
+    // Eigen standen gaan hier overheen. Zo kun je ook een ascendant opgeven
+    // wanneer je geboortetijd onbekend is maar je hem elders hebt laten bepalen.
+    if (opties.overschrijf) {
+      Object.keys(opties.overschrijf).forEach(function (k) {
+        if (!zetPunt(punten, k, opties.overschrijf[k])) return;
+        if (namen.indexOf(k) < 0) namen.push(k);
+        res.overschreven = true;
+      });
+    }
+
+    if (punten.asc) {
+      res.huizen = houses(punten.asc.lon);
       Object.keys(punten).forEach(function (k) {
         punten[k].huis = houseOf(punten[k].lon, res.huizen);
       });
@@ -522,6 +577,7 @@
     moonPhase: moonPhase, PHASE_NAMES: PHASE_NAMES,
     nextPhaseJD: nextPhaseJD, nextSignChange: nextSignChange,
     chart: chart, transits: transits, synastry: synastry,
+    zetBron: zetBron, heeftBron: heeftBron, zetPunt: zetPunt,
     BODIES: BODIES
   };
 })(typeof window !== 'undefined' ? window : globalThis);

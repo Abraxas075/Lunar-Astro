@@ -90,6 +90,79 @@ dag altijd hetzelfde resultaat.
 
 ---
 
+## Je eigen planeetstanden gebruiken
+
+Wil je niet op de ingebouwde formules vertrouwen, dan kun je je eigen standen
+aanleveren. Dat kan op twee manieren, die naast elkaar werken.
+
+### Via de app
+
+*Profiel → Eigen gegevens.* Plak daar je waarden, druk op **Inlezen en
+controleren**, en je ziet jouw waarden naast wat LUNA zelf uitrekent, met het
+verschil in boogminuten. Pas als het klopt, bewaar je ze. Handig om te
+controleren of je gegevens goed gelezen worden — een groot verschil wijst
+meestal op een andere tijdzone, een ander huizensysteem, of siderische in
+plaats van tropische dierenriem.
+
+Wat je zo invoert, staat alleen in die ene browser. Met **Opslaan als bestand**
+en **Bestand inlezen** neem je het mee naar een ander apparaat.
+
+### Via de repository
+
+Zet het in `ephemeride.js`. Dat bestand staat in git, dus het werkt overal en
+blijft bewaard. In het bestand staat uitleg met voorbeelden.
+
+### Twee soorten gegevens
+
+**Een horoscoop** zijn de standen op één moment, bijvoorbeeld je
+geboortehoroscoop zoals een ander programma die berekend heeft. Die vervangen
+de berekening voor die ene persoon. Het veld `voor` moet overeenkomen met de
+naam die je in de app hebt ingevuld.
+
+Je hoeft niet alles op te geven; wat je weglaat, rekent LUNA zelf uit. Geef je
+alleen een ascendant op, dan krijg je een ascendant en huizen ook wanneer je
+geboortetijd onbekend is.
+
+**Een tabel** zijn standen over een reeks datums, en die vervangen de stand van
+vandaag, de transits en de maanfase. Tussen twee rijen wordt geïnterpoleerd
+(Lagrange over vier punten), dus dagelijkse rijen zijn ruim genoeg — voor de
+maan blijft de fout dan onder de boogseconde. Buiten het bereik van je tabel
+rekent LUNA weer met haar eigen formules, en lichamen die niet in je tabel
+staan worden gewoon berekend.
+
+### Schrijfwijzen die begrepen worden
+
+Voor een horoscoop, één regel per lichaam:
+
+    Zon 1°03'27" Schorpioen
+    Maan 7 Cap 45
+    Mercurius 17°22 Sco R
+    AC 6°23' Tweelingen
+    zon 211.0575
+
+Namen mogen Nederlands of Engels zijn (`maan`/`moon`, `knoop`/`true node`,
+`asc`/`ascendant`/`AC`), tekens voluit of als afkorting (`Schorpioen`, `Sco`,
+`♏`). Een `R` of `Rx` markeert retrograde. Regels die niet herkend worden,
+worden overgeslagen en genoemd.
+
+Voor een tabel, met een kopregel:
+
+    datum,zon,maan,mars
+    2026-08-25,152.19,295.42,99.20
+    2026-08-26,153.17,308.31,99.84
+
+Komma's, puntkomma's en tabs werken alle drie als scheidingsteken. Datums mogen
+`2026-08-25` of `25-08-2026` zijn, eventueel met tijd erachter. De cellen mogen
+kommagetallen zijn of dezelfde schrijfwijze als hierboven.
+
+**Let op:** alle lengtes zijn ecliptische lengtes in graden vanaf 0° Ram, en
+alle datums en tijden zijn wereldtijd (UT), niet je eigen kloktijd.
+
+Waar met eigen gegevens gerekend wordt, staat dat in de app met een klein
+merkteken boven het scherm.
+
+---
+
 ## Bestanden
 
 | Bestand | Wat het doet |
@@ -98,6 +171,8 @@ dag altijd hetzelfde resultaat.
 | `styles.css` | Het designsysteem als CSS-variabelen |
 | `astro.js` | De astronomische kern |
 | `plaatsen.js` | 167 geboorteplaatsen met coördinaten en tijdzone |
+| `ephemeride.js` | Je eigen planeetstanden, vast in de repository |
+| `eigen-data.js` | Leest eigen gegevens in, vergelijkt en interpoleert |
 | `content.js` | Tekens, planeten, huizen, aspecten, maanfasen, retrogrades |
 | `content-zon-asc.js` | Duidingen voor zon en ascendant per teken |
 | `content-maan.js` | De maan per teken, uitgewerkt |

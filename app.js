@@ -4,7 +4,7 @@
   'use strict';
 
   var A = window.LunaAstro, C = window.LunaContent,
-      D = window.LunaDuiding, PL = window.LunaPlaatsen;
+      D = window.LunaDuiding, PL = window.LunaPlaatsen, E = window.LunaEigenData;
 
   var scherm = document.getElementById('scherm');
   var navigatie = document.getElementById('navigatie');
@@ -116,7 +116,8 @@
     return A.chart({
       jd: A.jdFromDate(moment),
       lat: plaats.lat, lon: plaats.lon,
-      tijdBekend: !!gegevens.tijdBekend
+      tijdBekend: !!gegevens.tijdBekend,
+      overschrijf: E ? E.overschrijfVoor(gegevens.naam) : null
     });
   }
 
@@ -134,6 +135,16 @@
   function nuJD() { return A.jdFromDate(new Date()); }
 
   /* ================= onderdelen ================= */
+
+  /* Laat zien wanneer een scherm niet op de ingebouwde formules leunt. */
+  function eigenMerk(chart) {
+    var stukken = [];
+    if (chart && chart.overschreven) stukken.push('eigen standen');
+    if (A.heeftBron()) stukken.push('eigen tabel');
+    if (!stukken.length) return '';
+    return '<a href="#/eigen-data" class="chip neutraal" style="text-decoration:none;cursor:pointer">' +
+      ico('check', 'icoon-klein') + ' ' + stukken.join(' + ') + '</a>';
+  }
 
   function ring(percentage, maat, label) {
     var r = (maat || 64) / 2 - 3;
@@ -433,7 +444,8 @@
 
     var kop = '<section class="kolom opduiken" style="gap:8px">' +
       '<p class="label-caps goud">' + esc(datumLang(nu)) + '</p>' +
-      '<h1 class="display">' + groet(nu) + ',<br>' + esc(staat.profiel.naam.split(' ')[0]) + '</h1></section>';
+      '<h1 class="display">' + groet(nu) + ',<br>' + esc(staat.profiel.naam.split(' ')[0]) + '</h1>' +
+      (eigenMerk(natal) ? '<div>' + eigenMerk(natal) + '</div>' : '') + '</section>';
 
     var trio = driehoekje([
       { icoon: 'sun', kleur: 'var(--primary)', label: 'Zon', waarde: D.tekenNaam(p.zon.teken) },
@@ -610,6 +622,7 @@
 
       '<section class="glas vulling kolom opduiken" style="gap:12px;align-items:center">' +
       wielSVG(natal, 340) +
+      (eigenMerk(natal) ? '<div>' + eigenMerk(natal) + '</div>' : '') +
       '<p class="label-caps gedempt">' + esc(staat.profiel.naam) + ' · ' +
       esc(datumKort(new Date(staat.profiel.datum))) + ' ' + new Date(staat.profiel.datum).getFullYear() +
       (staat.profiel.tijdBekend ? ' · ' + esc(staat.profiel.tijd) : '') +
@@ -1100,6 +1113,7 @@
       ['bewaard', 'Opgeslagen inzichten', '#/bewaard', 'bookmark'],
       ['relaties', 'Relaties', '#/match', 'users'],
       ['meldingen', 'Meldingen', '#/meldingen', 'bell'],
+      ['eigen', 'Eigen gegevens', '#/eigen-data', 'grid'],
       ['over', 'Over LUNA', '#/over', 'info']
     ];
 
@@ -1128,6 +1142,178 @@
       '<button class="knop knop-spook knop-vol opduiken" data-actie="wissen">' +
       ico('trash', 'icoon-klein') + ' Alle gegevens wissen</button>' +
       '<p class="hint">Alles staat in de opslag van deze browser. Wissen kan niet ongedaan gemaakt worden.</p>';
+  };
+
+  /* ---- eigen gegevens ---- */
+
+  var eigenVoorbeeld = null;
+  var eigenTekst = '';
+  var eigenVoor = '';
+  var eigenBron = '';
+
+  function eigenNamen() {
+    var namen = [];
+    if (staat.profiel) namen.push(staat.profiel.naam);
+    staat.relaties.forEach(function (r) { namen.push(r.naam); });
+    return namen;
+  }
+
+  schermen['eigen-data'] = function () {
+    var aanwezig = E ? E.alles() : { horoscopen: [], tabellen: [] };
+    var namen = eigenNamen();
+
+    var voorbeeld = '';
+    if (eigenVoorbeeld && eigenVoorbeeld.fout) {
+      voorbeeld = '<div class="glas vulling rij" style="gap:10px;align-items:flex-start">' +
+        '<span style="color:var(--rose)">' + ico('warning') + '</span>' +
+        '<div class="kolom" style="gap:4px"><strong>Niet gelukt</strong>' +
+        '<span class="body-sm zacht">' + esc(eigenVoorbeeld.fout) + '</span></div></div>';
+
+    } else if (eigenVoorbeeld && eigenVoorbeeld.type === 'horoscoop') {
+      var jd = null;
+      var doel = eigenVoor && eigenVoor === (staat.profiel || {}).naam ? staat.profiel
+              : staat.relaties.filter(function (r) { return r.naam === eigenVoor; })[0];
+      if (doel) {
+        var h = horoscoopVan(doel);
+        if (h) jd = h.jd;
+      }
+      var rijen = E.vergelijk(eigenVoorbeeld.punten, jd);
+      voorbeeld = '<section class="glas vulling kolom" style="gap:12px">' +
+        '<strong class="headline-sm">' + rijen.length + ' standen herkend</strong>' +
+        (jd === null
+          ? '<p class="hint">Kies hierboven voor wie deze horoscoop is, dan zet ik jouw waarden ' +
+            'naast de berekende.</p>'
+          : '<p class="hint">Jouw waarden naast wat LUNA zelf uitrekent. Grote verschillen wijzen ' +
+            'meestal op een andere tijdzone, een ander huizensysteem of siderische in plaats van ' +
+            'tropische dierenriem.</p>') +
+        '<div class="glas" style="overflow:hidden">' +
+        rijen.map(function (r) {
+          var kleur = r.verschil === null ? 'var(--outline)'
+                    : Math.abs(r.verschil) < 6 ? 'var(--groen)'
+                    : Math.abs(r.verschil) < 60 ? 'var(--primary)' : 'var(--rose)';
+          var verschil = r.verschil === null ? ''
+            : (Math.abs(r.verschil) < 1 ? 'gelijk'
+               : (r.verschil > 0 ? '+' : '\u2212') + Math.abs(r.verschil).toFixed(0) + '\u2032');
+          return '<div class="lijst-rij kolom" style="cursor:default;gap:4px;align-items:stretch">' +
+            '<div class="rij-tussen"><strong>' + esc(C.PLANETEN[r.lichaam].naam) +
+            (r.retrograde ? ' <span class="gedempt body-sm">Rx</span>' : '') + '</strong>' +
+            (verschil ? '<span class="body-sm" style="color:' + kleur + '">' + verschil + '</span>' : '') +
+            '</div>' +
+            '<div class="body-sm zacht">' + esc(D.graadTekst(r.eigen)) +
+            (r.berekend === null ? ''
+              : '<span class="gedempt"> \u00b7 LUNA ' + esc(D.graadTekst(r.berekend)) + '</span>') +
+            '</div></div>';
+        }).join('') + '</div>' +
+        (eigenVoorbeeld.overgeslagen && eigenVoorbeeld.overgeslagen.length
+          ? '<p class="hint">Overgeslagen regels: ' +
+            esc(eigenVoorbeeld.overgeslagen.slice(0, 4).join(' · ')) +
+            (eigenVoorbeeld.overgeslagen.length > 4 ? ' …' : '') + '</p>'
+          : '') +
+        '<button class="knop knop-primair knop-vol" data-actie="eigen-opslaan"' +
+        (eigenVoor ? '' : ' disabled') + '>' +
+        (eigenVoor ? 'Bewaren voor ' + esc(eigenVoor) : 'Kies eerst voor wie') + '</button></section>';
+
+    } else if (eigenVoorbeeld && eigenVoorbeeld.type === 'tabel') {
+      voorbeeld = '<section class="glas vulling kolom" style="gap:12px">' +
+        '<strong class="headline-sm">Tabel herkend</strong>' +
+        '<div class="rij" style="flex-wrap:wrap;gap:8px">' +
+        eigenVoorbeeld.lichamen.map(function (l) {
+          return '<span class="chip">' + esc(C.PLANETEN[l].naam) + '</span>';
+        }).join('') + '</div>' +
+        '<p class="body-sm zacht">' + eigenVoorbeeld.aantal + ' standen, van ' +
+        esc(datumKort(A.dateFromJD(eigenVoorbeeld.van))) + ' ' +
+        A.dateFromJD(eigenVoorbeeld.van).getFullYear() + ' tot ' +
+        esc(datumKort(A.dateFromJD(eigenVoorbeeld.tot))) + ' ' +
+        A.dateFromJD(eigenVoorbeeld.tot).getFullYear() + '.</p>' +
+        (eigenVoorbeeld.fouteRegels
+          ? '<p class="hint">' + eigenVoorbeeld.fouteRegels + ' regels overgeslagen omdat de datum ' +
+            'niet te lezen was.</p>' : '') +
+        (eigenVoorbeeld.aantal > 50000
+          ? '<p class="hint">Dit is een grote tabel. Past hij niet in de opslag van je browser, ' +
+            'zet hem dan in ephemeride.js.</p>' : '') +
+        '<button class="knop knop-primair knop-vol" data-actie="eigen-opslaan">Tabel bewaren</button>' +
+        '</section>';
+    }
+
+    function vermelding(item, soort) {
+      return '<div class="glas vulling-klein rij" style="gap:12px">' +
+        '<span class="bol goud">' + ico(soort === 'tabel' ? 'grid' : 'person') + '</span>' +
+        '<div class="kolom" style="gap:2px;flex:1">' +
+        '<strong>' + esc(soort === 'tabel'
+          ? (item.bron || 'Tabel')
+          : (item.voor || 'Zonder naam')) + '</strong>' +
+        '<span class="body-sm gedempt">' + esc(soort === 'tabel'
+          ? item.lichamen.length + ' lichamen · ' + item.aantal + ' standen'
+          : Object.keys(item.punten).length + ' standen' + (item.bron ? ' · ' + item.bron : '')) +
+        (item.vast ? ' · uit ephemeride.js' : '') + '</span></div>' +
+        (item.vast ? '<span class="chip">vast</span>'
+          : '<button class="knop knop-spook" style="padding:6px 12px" data-actie="eigen-verwijder" ' +
+            'data-id="' + esc(item.id) + '" aria-label="Verwijderen">' + ico('trash', 'icoon-klein') +
+            '</button>') + '</div>';
+    }
+
+    return '<section class="kolom opduiken" style="gap:10px">' +
+      '<h1 class="headline-lg">Eigen gegevens</h1>' +
+      '<p class="body-lg zacht">Lever je eigen planeetstanden aan, in plaats van of naast de ' +
+      'berekening van LUNA zelf.</p></section>' +
+
+      '<section class="glas vulling kolom opduiken" style="gap:16px">' +
+      '<div class="veld"><label for="v-eigen">Plak je gegevens</label>' +
+      '<textarea id="v-eigen" data-veld="eigen" rows="8" spellcheck="false" ' +
+      'placeholder="Zon 1&#176;03&#39; Schorpioen&#10;Maan 7 Cap 45&#10;AC 6&#176;23&#39; Tweelingen&#10;&#10;of een tabel:&#10;datum,zon,maan,mars&#10;2026-08-25,152.19,295.42,99.20" ' +
+      'style="font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:14px;resize:vertical">' +
+      esc(eigenTekst) + '</textarea></div>' +
+
+      '<div class="veld"><label for="v-eigen-voor">Voor wie (alleen bij een horoscoop)</label>' +
+      '<select id="v-eigen-voor" data-veld="eigenVoor"><option value="">Kies een persoon</option>' +
+      namen.map(function (n) {
+        return '<option value="' + esc(n) + '"' + (n === eigenVoor ? ' selected' : '') + '>' +
+          esc(n) + '</option>';
+      }).join('') + '</select></div>' +
+
+      '<div class="veld"><label for="v-eigen-bron">Waar komt het vandaan (optioneel)</label>' +
+      '<input id="v-eigen-bron" data-veld="eigenBron" value="' + esc(eigenBron) + '" ' +
+      'placeholder="Bijvoorbeeld: Swiss Ephemeris, of Astrodienst"></div>' +
+
+      '<div class="rij" style="gap:10px">' +
+      '<button class="knop knop-primair" data-actie="eigen-lezen">Inlezen en controleren</button>' +
+      (eigenTekst ? '<button class="knop knop-spook" data-actie="eigen-leegmaken">Leegmaken</button>' : '') +
+      '</div></section>' +
+
+      voorbeeld +
+
+      '<section class="sectie opduiken"><h3 class="headline-sm">Wat er nu gebruikt wordt</h3>' +
+      (aanwezig.horoscopen.length || aanwezig.tabellen.length
+        ? aanwezig.horoscopen.map(function (h) { return vermelding(h, 'horoscoop'); }).join('') +
+          aanwezig.tabellen.map(function (t) { return vermelding(t, 'tabel'); }).join('')
+        : '<div class="leeg">Nog niets. LUNA rekent alles zelf uit.</div>') +
+      '</section>' +
+
+      '<section class="sectie opduiken"><h3 class="headline-sm">Meenemen naar een ander apparaat</h3>' +
+      '<div class="rij" style="gap:10px;flex-wrap:wrap">' +
+      '<button class="knop knop-spook" data-actie="eigen-uitvoer">' + ico('share', 'icoon-klein') +
+      ' Opslaan als bestand</button>' +
+      '<label class="knop knop-spook" style="cursor:pointer">' + ico('plus', 'icoon-klein') +
+      ' Bestand inlezen<input type="file" accept=".json,application/json" data-eigen-bestand ' +
+      'style="display:none"></label>' +
+      (aanwezig.horoscopen.concat(aanwezig.tabellen).some(function (x) { return !x.vast; })
+        ? '<button class="knop knop-spook" data-actie="eigen-wissen">' + ico('trash', 'icoon-klein') +
+          ' Alles wissen</button>' : '') +
+      '</div></section>' +
+
+      '<section class="glas vulling kolom opduiken" style="gap:10px">' +
+      '<strong class="headline-sm">Hoe het werkt</strong>' +
+      '<p class="body-sm zacht"><strong>Een horoscoop</strong> zijn de standen op één moment. ' +
+      'Ze vervangen de berekening voor die ene persoon. Wat je weglaat, rekent LUNA gewoon uit. ' +
+      'Geef je alleen een ascendant op, dan krijg je huizen ook zonder bekende geboortetijd.</p>' +
+      '<p class="body-sm zacht"><strong>Een tabel</strong> zijn standen over een reeks datums. ' +
+      'Die vervangen de stand van vandaag, de transits en de maanfase. Tussen twee rijen wordt ' +
+      'geïnterpoleerd, dus dagelijkse rijen volstaan. Buiten het bereik van je tabel rekent LUNA ' +
+      'weer zelf.</p>' +
+      '<p class="body-sm zacht">Alle lengtes zijn ecliptische graden vanaf 0° Ram; datums en ' +
+      'tijden zijn wereldtijd (UT).</p>' +
+      '<p class="hint">Wat je hier invoert staat alleen in deze browser. Wil je het op elk apparaat, ' +
+      'zet het dan in het bestand ephemeride.js in de repository.</p></section>';
   };
 
   /* ---- meldingen ---- */
@@ -1388,6 +1574,55 @@
       render();
     }
 
+    else if (actie === 'eigen-lezen') {
+      eigenVoorbeeld = E.parse(eigenTekst);
+      render();
+    }
+
+    else if (actie === 'eigen-leegmaken') {
+      eigenTekst = ''; eigenVoorbeeld = null;
+      render();
+    }
+
+    else if (actie === 'eigen-opslaan') {
+      var r;
+      if (eigenVoorbeeld.type === 'horoscoop') {
+        r = E.voegHoroscoopToe(eigenVoorbeeld.punten, eigenVoor, eigenBron);
+      } else {
+        r = E.voegTabelToe(eigenVoorbeeld, eigenBron);
+      }
+      if (r && r.fout) { toon(r.fout); return; }
+      eigenVoorbeeld = null; eigenTekst = '';
+      _cache = {};
+      toon('Eigen gegevens bewaard.');
+      render();
+    }
+
+    else if (actie === 'eigen-verwijder') {
+      E.verwijder(knop.dataset.id);
+      _cache = {};
+      render();
+    }
+
+    else if (actie === 'eigen-wissen') {
+      if (!confirm('Al je eigen gegevens uit deze browser wissen? Wat in ephemeride.js staat, blijft.')) return;
+      E.wisAlles();
+      _cache = {};
+      render();
+    }
+
+    else if (actie === 'eigen-uitvoer') {
+      var blob = new Blob([E.exporteer()], { type: 'application/json' });
+      var url = URL.createObjectURL(blob);
+      var link = document.createElement('a');
+      link.href = url;
+      link.download = 'luna-eigen-data.json';
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+    }
+
     else if (actie === 'wissen') {
       if (!confirm('Al je gegevens uit deze browser wissen?')) return;
       localStorage.removeItem(SLEUTEL);
@@ -1416,6 +1651,8 @@
         opslaanKnop.disabled = !(formulier.naam && formulier.datum && formulier.plaats);
       }
     }
+    if (veld === 'eigen') { eigenTekst = e.target.value; return; }
+    if (veld === 'eigenBron') { eigenBron = e.target.value; return; }
     var instelling = e.target.dataset.instelling;
     if (instelling) {
       staat.instellingen[instelling] = e.target.value;
@@ -1424,6 +1661,25 @@
   });
 
   scherm.addEventListener('change', function (e) {
+    if (e.target.dataset.veld === 'eigenVoor') {
+      eigenVoor = e.target.value;
+      render();
+      return;
+    }
+    if (e.target.hasAttribute && e.target.hasAttribute('data-eigen-bestand')) {
+      var bestand = e.target.files && e.target.files[0];
+      if (!bestand) return;
+      var lezer = new FileReader();
+      lezer.onload = function () {
+        var r = E.importeer(String(lezer.result));
+        if (r.fout) { toon(r.fout); return; }
+        _cache = {};
+        toon('Ingelezen: ' + r.horoscopen + ' horoscopen, ' + r.tabellen + ' tabellen.');
+        render();
+      };
+      lezer.readAsText(bestand);
+      return;
+    }
     if (e.target.dataset.veld === 'tijdOnbekend' && formulier) {
       formulier.tijdBekend = !e.target.checked;
       render();
