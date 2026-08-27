@@ -214,6 +214,28 @@ merkteken boven het scherm.
 
 ---
 
+## Je eigen duiding bewaren
+
+Naast eigen standen kun je ook een volledig, kant-en-klaar geschreven
+duidingsrapport bewaren bij een profiel of relatie — je eigen tekst, los van
+de korte teksten die LUNA zelf uit de standen genereert.
+
+*Profiel → Mijn duiding.* Kies voor wie het is, plak de tekst, en bewaar. Het
+document verschijnt daarna als kaart onder de geboortehoroscoop van die
+persoon (of onder de compatibiliteit, bij een relatie).
+
+Een beetje opmaak wordt herkend: koppen (`#`, `##`, `###`), **vet**
+(`**tekst**`), citaten (`> tekst`), horizontale lijnen (`---`), genummerde en
+ongenummerde lijstjes, en tabellen in Markdown-stijl
+(`| kolom | kolom |`). Verder is het gewoon platte tekst.
+
+Deze documenten staan, net als je eigen standen, alleen in de opslag van deze
+browser — ze gaan nergens anders naartoe en worden niet in de repository
+gezet. Met **Opslaan als bestand** en **Bestand inlezen** neem je ze mee naar
+een ander apparaat.
+
+---
+
 ## Bestanden
 
 | Bestand | Wat het doet |
@@ -224,6 +246,7 @@ merkteken boven het scherm.
 | `plaatsen.js` | 167 geboorteplaatsen met coördinaten en tijdzone |
 | `ephemeride.js` | Je eigen planeetstanden, vast in de repository |
 | `eigen-data.js` | Leest eigen gegevens in, vergelijkt en interpoleert |
+| `mijn-duiding.js` | Bewaart en toont je eigen duidingsrapporten |
 | `content.js` | Tekens, planeten, huizen, aspecten, maanfasen, retrogrades |
 | `content-zon-asc.js` | Duidingen voor zon en ascendant per teken |
 | `content-maan.js` | De maan per teken, uitgewerkt |

@@ -4,7 +4,8 @@
   'use strict';
 
   var A = window.LunaAstro, C = window.LunaContent,
-      D = window.LunaDuiding, PL = window.LunaPlaatsen, E = window.LunaEigenData;
+      D = window.LunaDuiding, PL = window.LunaPlaatsen, E = window.LunaEigenData,
+      ED = window.LunaEigenDuiding;
 
   var scherm = document.getElementById('scherm');
   var navigatie = document.getElementById('navigatie');
@@ -601,6 +602,7 @@
   schermen.geboorte = function () {
     var natal = mijnHoroscoop();
     var p = natal.punten;
+    var eigenDocs = ED.voorPersoon(staat.profiel.naam);
     var volgorde = ['zon', 'maan', 'asc', 'mercurius', 'venus', 'mars', 'jupiter',
                     'saturnus', 'uranus', 'neptunus', 'pluto', 'mc', 'knoop'];
 
@@ -650,7 +652,23 @@
 
       '<section class="sectie opduiken"><h3 class="headline-sm">Sterkste aspecten</h3>' + aspecten +
       '<p class="hint">Aspecten zijn de hoeken tussen twee punten. Ze vertellen hoe die twee delen van jou ' +
-      'zich tot elkaar verhouden.</p></section>';
+      'zich tot elkaar verhouden.</p></section>' +
+
+      (eigenDocs.length
+        ? '<section class="sectie opduiken"><h3 class="headline-sm">Jouw eigen duiding</h3>' +
+          eigenDocs.map(function (d) {
+            return '<a class="glas vulling rij opduiken" href="#/duiding/' + d.id + '" ' +
+              'style="gap:14px;text-decoration:none;color:inherit">' +
+              '<span class="bol goud">' + ico('book') + '</span>' +
+              '<div class="kolom" style="gap:2px;flex:1"><strong>' + esc(d.titel) + '</strong>' +
+              '<span class="body-sm zacht">' + ED.leestijd(d.tekst) + ' minuten lezen' +
+              (d.bron ? ' · ' + esc(d.bron) : '') + '</span></div>' +
+              '<span class="gedempt">' + ico('chevron-right') + '</span></a>';
+          }).join('') + '</section>'
+        : '<a class="lijst-rij glas opduiken" href="#/mijn-duiding/' + encodeURIComponent(staat.profiel.naam) + '" ' +
+          'style="text-decoration:none;color:inherit">' + ico('book') +
+          '<span style="flex:1">Eigen duiding toevoegen</span>' +
+          '<span class="pijl">' + ico('chevron-right') + '</span></a>');
   };
 
   /* ---- detail van een punt ---- */
@@ -1060,8 +1078,22 @@
         '<span class="body-sm goud">' + esc(D.tekenNaam(tekenIdx)) + '</span></div>';
     }
 
+    var eigenDocsR = ED.voorPersoon(r.naam);
+
     return '<section class="kolom opduiken" style="gap:10px;text-align:center">' +
       '<h1 class="headline-lg">Kosmische compatibiliteit</h1></section>' +
+
+      (eigenDocsR.length
+        ? '<section class="sectie opduiken"><h3 class="headline-sm">Eigen duiding van ' + esc(r.naam) + '</h3>' +
+          eigenDocsR.map(function (d) {
+            return '<a class="glas vulling rij opduiken" href="#/duiding/' + d.id + '" ' +
+              'style="gap:14px;text-decoration:none;color:inherit">' +
+              '<span class="bol goud">' + ico('book') + '</span>' +
+              '<div class="kolom" style="gap:2px;flex:1"><strong>' + esc(d.titel) + '</strong>' +
+              '<span class="body-sm zacht">' + ED.leestijd(d.tekst) + ' minuten lezen</span></div>' +
+              '<span class="gedempt">' + ico('chevron-right') + '</span></a>';
+          }).join('') + '</section>'
+        : '') +
 
       '<section class="glas vulling kolom opduiken" style="gap:16px;align-items:center">' +
       '<div class="rij" style="gap:20px;align-items:center">' +
@@ -1126,6 +1158,7 @@
       ['relaties', 'Relaties', '#/match', 'users'],
       ['meldingen', 'Meldingen', '#/meldingen', 'bell'],
       ['eigen', 'Eigen gegevens', '#/eigen-data', 'grid'],
+      ['duiding', 'Mijn duiding', '#/mijn-duiding', 'book'],
       ['over', 'Over LUNA', '#/over', 'info']
     ];
 
@@ -1373,6 +1406,116 @@
       'tijden zijn wereldtijd (UT).</p>' +
       '<p class="hint">Wat je hier invoert staat alleen in deze browser. Wil je het op elk apparaat, ' +
       'zet het dan in het bestand ephemeride.js in de repository.</p></section>';
+  };
+
+  /* ---- mijn duiding ---- */
+
+  var duidVoor = '';
+  var duidTitel = '';
+  var duidBron = '';
+  var duidTekst = '';
+  var duidBewerkId = null;
+
+  function duidFormulierLeeg() {
+    duidVoor = ''; duidTitel = ''; duidBron = ''; duidTekst = ''; duidBewerkId = null;
+  }
+
+  function duidFormulierLaden(doc) {
+    duidVoor = doc.voor; duidTitel = doc.titel; duidBron = doc.bron || '';
+    duidTekst = doc.tekst; duidBewerkId = doc.id;
+  }
+
+  schermen['mijn-duiding'] = function (params) {
+    var voorgekozen = params[0] ? decodeURIComponent(params[0]) : '';
+    if (voorgekozen && !duidBewerkId && !duidTekst) duidVoor = voorgekozen;
+    var namen = eigenNamen();
+    var documenten = ED.lijst();
+
+    function kaart(doc) {
+      var s = ED.samenvatting(doc.tekst, 130);
+      var datum = new Date(doc.bijgewerkt || doc.aangemaakt);
+      return '<a class="glas vulling kolom opduiken" href="#/duiding/' + doc.id + '" ' +
+        'style="gap:8px;text-decoration:none;color:inherit">' +
+        '<div class="rij-tussen"><strong class="headline-sm">' + esc(doc.voor) + '</strong>' +
+        '<span class="body-sm gedempt">' + ED.leestijd(doc.tekst) + ' min</span></div>' +
+        '<span class="body-sm goud">' + esc(doc.titel) + '</span>' +
+        '<p class="body-sm zacht" style="margin:0">' + esc(s) + '</p>' +
+        '<span class="hint">' + (doc.bron ? esc(doc.bron) + ' · ' : '') +
+        esc(datumKort(datum)) + ' ' + datum.getFullYear() + '</span></a>';
+    }
+
+    return '<section class="kolom opduiken" style="gap:10px">' +
+      '<h1 class="headline-lg">Mijn duiding</h1>' +
+      '<p class="body-lg zacht">Bewaar een volledig duidingsrapport bij een profiel of relatie ' +
+      '— je eigen tekst, los van wat LUNA zelf uit de standen genereert.</p></section>' +
+
+      '<section class="glas vulling kolom opduiken" style="gap:16px">' +
+      '<strong class="headline-sm">' + (duidBewerkId ? 'Document bewerken' : 'Nieuw document') + '</strong>' +
+
+      '<div class="veld"><label for="v-duid-voor">Voor wie</label>' +
+      '<select id="v-duid-voor" data-veld="duidVoor"><option value="">Kies een persoon</option>' +
+      namen.map(function (n) {
+        return '<option value="' + esc(n) + '"' + (n === duidVoor ? ' selected' : '') + '>' + esc(n) + '</option>';
+      }).join('') + '</select></div>' +
+
+      '<div class="veld"><label for="v-duid-titel">Titel (optioneel)</label>' +
+      '<input id="v-duid-titel" data-veld="duidTitel" value="' + esc(duidTitel) + '" ' +
+      'placeholder="Bijvoorbeeld: Volledig karakterprofiel"></div>' +
+
+      '<div class="veld"><label for="v-duid-bron">Bron (optioneel)</label>' +
+      '<input id="v-duid-bron" data-veld="duidBron" value="' + esc(duidBron) + '" ' +
+      'placeholder="Waar komt deze tekst vandaan?"></div>' +
+
+      '<div class="veld"><label for="v-duid-tekst">Tekst</label>' +
+      '<textarea id="v-duid-tekst" data-veld="duidTekst" rows="10" spellcheck="false" ' +
+      'placeholder="Plak hier het volledige document. Koppen (#), vet (**tekst**), citaten (&gt;), ' +
+      'lijsten en tabellen worden herkend." ' +
+      'style="font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:13px;resize:vertical">' +
+      esc(duidTekst) + '</textarea></div>' +
+
+      '<div class="rij" style="gap:10px">' +
+      '<button class="knop knop-primair" data-actie="duiding-opslaan"' +
+      (duidVoor && duidTekst.trim() ? '' : ' disabled') + '>' +
+      (duidBewerkId ? 'Wijzigingen bewaren' : 'Bewaren') + '</button>' +
+      (duidBewerkId || duidTekst
+        ? '<button class="knop knop-spook" data-actie="duiding-nieuw">Leegmaken</button>' : '') +
+      '</div></section>' +
+
+      '<section class="sectie opduiken"><h3 class="headline-sm">Bewaarde documenten</h3>' +
+      (documenten.length ? documenten.map(kaart).join('')
+        : '<div class="leeg">Nog niets bewaard.</div>') + '</section>' +
+
+      '<section class="sectie opduiken"><h3 class="headline-sm">Meenemen naar een ander apparaat</h3>' +
+      '<div class="rij" style="gap:10px;flex-wrap:wrap">' +
+      '<button class="knop knop-spook" data-actie="duiding-uitvoer">' + ico('share', 'icoon-klein') +
+      ' Opslaan als bestand</button>' +
+      '<label class="knop knop-spook" style="cursor:pointer">' + ico('plus', 'icoon-klein') +
+      ' Bestand inlezen<input type="file" accept=".json,application/json" data-duiding-bestand ' +
+      'style="display:none"></label></div></section>' +
+
+      '<p class="hint">Deze teksten staan alleen in de opslag van deze browser en gaan nergens ' +
+      'anders naartoe. Wil je ze op een ander apparaat, gebruik dan het bestand hierboven.</p>';
+  };
+
+  schermen.duiding = function (params) {
+    var doc = ED.geef(params[0]);
+    if (!doc) return '<div class="leeg">Dit document bestaat niet meer.</div>';
+    var datum = new Date(doc.bijgewerkt || doc.aangemaakt);
+
+    return '<section class="kolom opduiken" style="gap:8px">' +
+      '<p class="label-caps goud">' + esc(doc.voor) + '</p>' +
+      '<h1 class="headline-lg">' + esc(doc.titel) + '</h1>' +
+      '<p class="hint">' + (doc.bron ? esc(doc.bron) + ' · ' : '') +
+      esc(datumKort(datum)) + ' ' + datum.getFullYear() + ' · ' + ED.leestijd(doc.tekst) + ' minuten lezen</p>' +
+      '</section>' +
+
+      '<article class="glas vulling opduiken duiding-inhoud">' + ED.render(doc.tekst) + '</article>' +
+
+      '<div class="rij opduiken" style="gap:10px">' +
+      '<button class="knop knop-spook" data-actie="duiding-bewerk" data-id="' + esc(doc.id) + '">' +
+      ico('pencil', 'icoon-klein') + ' Bewerken</button>' +
+      '<button class="knop knop-spook" data-actie="duiding-verwijder" data-id="' + esc(doc.id) + '">' +
+      ico('trash', 'icoon-klein') + ' Verwijderen</button></div>';
   };
 
   /* ---- meldingen ---- */
@@ -1633,6 +1776,38 @@
       render();
     }
 
+    else if (actie === 'duiding-opslaan') {
+      var velden = { voor: duidVoor, titel: duidTitel, bron: duidBron, tekst: duidTekst };
+      var r = duidBewerkId ? ED.bewerken(duidBewerkId, velden) : ED.toevoegen(velden);
+      if (r && r.fout) { toon(r.fout); return; }
+      var naarId = r.id;
+      duidFormulierLeeg();
+      toon('Bewaard.');
+      ga('#/duiding/' + naarId);
+    }
+
+    else if (actie === 'duiding-nieuw') { duidFormulierLeeg(); render(); }
+
+    else if (actie === 'duiding-bewerk') {
+      duidFormulierLaden(ED.geef(knop.dataset.id));
+      ga('#/mijn-duiding');
+    }
+
+    else if (actie === 'duiding-verwijder') {
+      if (!confirm('Dit document verwijderen?')) return;
+      ED.verwijder(knop.dataset.id);
+      ga('#/mijn-duiding');
+    }
+
+    else if (actie === 'duiding-uitvoer') {
+      var blob = new Blob([ED.exporteer()], { type: 'application/json' });
+      var url = URL.createObjectURL(blob);
+      var link = document.createElement('a');
+      link.href = url; link.download = 'luna-mijn-duiding.json';
+      document.body.appendChild(link); link.click(); link.remove();
+      setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+    }
+
     else if (actie === 'eigen-lezen') {
       eigenVoorbeeld = E.parse(eigenTekst, eigenTz);
       render();
@@ -1712,6 +1887,14 @@
     }
     if (veld === 'eigen') { eigenTekst = e.target.value; return; }
     if (veld === 'eigenBron') { eigenBron = e.target.value; return; }
+    if (veld === 'duidTitel') { duidTitel = e.target.value; return; }
+    if (veld === 'duidBron') { duidBron = e.target.value; return; }
+    if (veld === 'duidTekst') {
+      duidTekst = e.target.value;
+      var opslaanKnop = scherm.querySelector('[data-actie="duiding-opslaan"]');
+      if (opslaanKnop) opslaanKnop.disabled = !(duidVoor && duidTekst.trim());
+      return;
+    }
     var instelling = e.target.dataset.instelling;
     if (instelling) {
       staat.instellingen[instelling] = e.target.value;
@@ -1720,6 +1903,25 @@
   });
 
   scherm.addEventListener('change', function (e) {
+    if (e.target.dataset.veld === 'duidVoor') {
+      duidVoor = e.target.value;
+      var opslaanKnop2 = scherm.querySelector('[data-actie="duiding-opslaan"]');
+      if (opslaanKnop2) opslaanKnop2.disabled = !(duidVoor && duidTekst.trim());
+      return;
+    }
+    if (e.target.hasAttribute && e.target.hasAttribute('data-duiding-bestand')) {
+      var bestand2 = e.target.files && e.target.files[0];
+      if (!bestand2) return;
+      var lezer2 = new FileReader();
+      lezer2.onload = function () {
+        var r2 = ED.importeer(String(lezer2.result));
+        if (r2.fout) { toon(r2.fout); return; }
+        toon('Ingelezen: ' + r2.aantal + ' document(en).');
+        render();
+      };
+      lezer2.readAsText(bestand2);
+      return;
+    }
     if (e.target.dataset.veld === 'eigenVoor') {
       eigenVoor = e.target.value;
       render();

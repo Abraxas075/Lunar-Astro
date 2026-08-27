@@ -396,3 +396,111 @@ nav.onder a.actief {
   main { max-width: 720px; }
   main.breed { max-width: 900px; }
 }
+
+/* ---------- eigen duiding: gerenderde tekst ---------- */
+
+.duiding-inhoud {
+  display: block;
+  color: var(--on-surface);
+  line-height: 1.6;
+}
+.duiding-inhoud h1 {
+  font-family: var(--serif);
+  font-size: 26px;
+  line-height: 34px;
+  font-weight: 600;
+  color: var(--primary);
+  margin: 32px 0 12px;
+}
+.duiding-inhoud h1:first-child { margin-top: 0; }
+.duiding-inhoud h2 {
+  font-family: var(--serif);
+  font-size: 21px;
+  line-height: 29px;
+  font-weight: 600;
+  margin: 28px 0 10px;
+}
+.duiding-inhoud h3 {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--on-surface-variant);
+  margin: 22px 0 8px;
+}
+.duiding-inhoud h4 {
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: .02em;
+  color: var(--outline);
+  margin: 18px 0 6px;
+}
+.duiding-inhoud p {
+  font-size: 16px;
+  margin: 0 0 14px;
+  color: var(--on-surface);
+}
+.duiding-inhoud strong { color: var(--primary-dim); font-weight: 700; }
+.duiding-inhoud em { font-style: italic; color: var(--on-surface-variant); }
+.duiding-inhoud code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 13px;
+  background: rgba(255, 255, 255, .08);
+  padding: 1px 5px;
+  border-radius: var(--r-sm);
+}
+.duiding-inhoud hr {
+  border: 0;
+  border-top: 1px solid rgba(255, 255, 255, .12);
+  margin: 24px 0;
+}
+.duiding-inhoud blockquote {
+  margin: 16px 0;
+  padding: 4px 16px;
+  border-left: 3px solid var(--primary-dim);
+  font-style: italic;
+  color: var(--on-surface-variant);
+  background: rgba(255, 255, 255, .03);
+  border-radius: 0 var(--r) var(--r) 0;
+}
+.duiding-inhoud ul, .duiding-inhoud ol {
+  margin: 0 0 14px;
+  padding-left: 22px;
+}
+.duiding-inhoud li { margin-bottom: 6px; }
+.duiding-inhoud ul > li::marker { color: var(--primary-dim); }
+.duiding-inhoud ol > li::marker { color: var(--primary-dim); font-weight: 600; }
+
+.duiding-tabel-wrap {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  max-width: 100%;
+  margin: 8px 0 18px;
+  border-radius: var(--r);
+  border: 1px solid rgba(255, 255, 255, .1);
+  background:
+    linear-gradient(to right, var(--surface-container) 0%, rgba(0,0,0,0) 4%) 0 0,
+    linear-gradient(to left, var(--surface-container) 0%, rgba(0,0,0,0) 4%) 100% 0;
+  background-repeat: no-repeat;
+  background-size: 24px 100%;
+  background-attachment: local, local;
+}
+.duiding-inhoud table {
+  border-collapse: collapse;
+  width: max-content;
+  min-width: 100%;
+  font-size: 14px;
+}
+.duiding-inhoud th, .duiding-inhoud td {
+  padding: 8px 12px;
+  text-align: left;
+  border-bottom: 1px solid rgba(255, 255, 255, .08);
+  white-space: normal;
+}
+.duiding-inhoud th {
+  background: rgba(255, 255, 255, .05);
+  color: var(--primary);
+  font-weight: 600;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+}
+.duiding-inhoud tr:last-child td { border-bottom: 0; }
