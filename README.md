@@ -40,6 +40,9 @@ gedraagt hij zich als een app.
 | **Vandaag** | Groet, je zon/maan/ascendant, de energie van vandaag, focusgebieden, maanfase en de sterkste transits |
 | **Dagelijks inzicht** | Het hoofdthema van de dag, uitgesplitst naar liefde, carrière en energie, plus de standen waar het op gebaseerd is |
 | **Geboorte** | Je geboortehoroscoop als wiel, alle planeten met duiding, en je sterkste aspecten |
+| **Diepe analyse** | Balans van elementen en kwaliteiten, halfronden, dominante planeten, patronen (stellium, grote driehoek, T-vierkant), waardigheden, huisheersers en geboortemaanfase. Met download als Markdown-rapport en een kant-en-klare prompt voor ChatGPT (`analyse.js`, volgens de Horoscoop-analyse Toolkit). De uitleg erbij (kracht en schaduw per planeet, elementen, huizen, aspectvragen, patronen, leesgids in twaalf stappen, begrippenlijst) staat in `gids.js`; de transitiepagina toont daarnaast de duur per planeet en je levenscycli |
+| **Werkbladen** | De zeven werkbladen uit de toolkit (basisgegevens, totaalbeeld, grote drie, planeet voor planeet, levensgebieden, themakaart, transits), voorgevuld met je horoscoop. Je eigen duiding bewaart de app per persoon in de browser; downloaden kan als Markdown (`werkbladen.js`) |
+| **Prompts** | De promptbibliotheek uit de toolkit (H-00 t/m H-13): volledige analyse, rode draad, werk, liefde, knopen, transits, huis voor huis, synastrie, kwaliteitscontrole en meer. Eén tik kopieert de prompt met je eigen gegevens erachter (`prompts.js`) |
 | **Punt-detail** | Per planeet een uitgewerkte pagina; de maan met sterke punten, kernbehoeften, uitdagingen en relaties |
 | **Maanfase** | De actuele fase met een op schaal getekende maanschijf, wat er goed bij past, en de eerstvolgende volle en nieuwe maan |
 | **Transities** | Wat de lopende planeten nu met je horoscoop doen, met orb, duur en of het aspect aanloopt of uitloopt |

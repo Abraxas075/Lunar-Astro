@@ -5,7 +5,7 @@
 
   var A = window.LunaAstro, C = window.LunaContent,
       D = window.LunaDuiding, PL = window.LunaPlaatsen, E = window.LunaEigenData,
-      ED = window.LunaEigenDuiding;
+      ED = window.LunaEigenDuiding, AN = window.LunaAnalyse, G = window.LunaGids, WB = window.LunaWerkbladen, PR = window.LunaPrompts;
 
   var scherm = document.getElementById('scherm');
   var navigatie = document.getElementById('navigatie');
@@ -20,6 +20,7 @@
     profiel: null,
     relaties: [],
     bewaard: [],
+    werkbladen: {},
     instellingen: {
       dagelijks: true, tijd: '08:00', transits: true, vollemaan: true,
       nieuwemaan: true, retrograde: true, relaties: false
@@ -35,6 +36,7 @@
         profiel: s.profiel || null,
         relaties: s.relaties || [],
         bewaard: s.bewaard || [],
+        werkbladen: s.werkbladen || {},
         instellingen: Object.assign({}, standaard.instellingen, s.instellingen || {})
       };
     } catch (e) {
@@ -650,6 +652,10 @@
       '<section class="sectie opduiken"><h3 class="headline-sm">Je planeten</h3>' +
       '<div class="glas" style="overflow:hidden">' + rijen + '</div></section>' +
 
+      '<a class="lijst-rij glas opduiken" href="#/analyse" style="text-decoration:none;color:inherit">' + ico('scale') +
+      '<span style="flex:1">Diepe analyse: balans, patronen, dominante planeten</span>' +
+      '<span class="pijl">' + ico('chevron-right') + '</span></a>' +
+
       '<section class="sectie opduiken"><h3 class="headline-sm">Sterkste aspecten</h3>' + aspecten +
       '<p class="hint">Aspecten zijn de hoeken tussen twee punten. Ze vertellen hoe die twee delen van jou ' +
       'zich tot elkaar verhouden.</p></section>' +
@@ -669,6 +675,329 @@
           'style="text-decoration:none;color:inherit">' + ico('book') +
           '<span style="flex:1">Eigen duiding toevoegen</span>' +
           '<span class="pijl">' + ico('chevron-right') + '</span></a>');
+  };
+
+  /* ---- verdiepende analyse ---- */
+
+  function download(naam, tekst, type) {
+    var blob = new Blob([tekst], { type: type + ';charset=utf-8' });
+    var url = URL.createObjectURL(blob);
+    var link = document.createElement('a');
+    link.href = url; link.download = naam;
+    document.body.appendChild(link); link.click(); link.remove();
+    setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+  }
+
+  function bestandsNaam(deel) {
+    return 'luna-' + String(staat.profiel.naam).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') + '-' + deel;
+  }
+
+  schermen.analyse = function () {
+    var natal = mijnHoroscoop();
+    var an = AN.analyseer(natal);
+    var p = natal.punten;
+    var KLEUR = { vuur: 'var(--ember)', aarde: 'var(--groen)', lucht: 'var(--tertiary)', water: 'var(--secondary)' };
+
+    function groep(namen, waarden, kleuren) {
+      var max = Math.max.apply(null, namen.map(function (n) { return waarden[n]; })) || 1;
+      return namen.map(function (n) {
+        return '<div class="kolom" style="gap:6px"><div class="rij-tussen">' +
+          '<span class="body-sm zacht" style="text-transform:capitalize">' + esc(n) + '</span>' +
+          '<span class="body-sm">' + waarden[n].toFixed(1).replace('.', ',') + '</span></div>' +
+          '<div class="balk"><i style="width:' + Math.round(100 * waarden[n] / max) + '%;' +
+          (kleuren ? 'background:' + kleuren[n] : '') + '"></i></div></div>';
+      }).join('');
+    }
+
+    function balansDuiding(an) {
+      var regels = [];
+      an.sterkEl.split(' en ').forEach(function (e) {
+        regels.push('<strong style="text-transform:capitalize">' + esc(e) + '</strong> sterk aanwezig: ' + esc(G.ELEMENT[e].sterk.toLowerCase()) + '.');
+      });
+      an.zwakEl.split(' en ').forEach(function (e) {
+        regels.push('<strong style="text-transform:capitalize">' + esc(e) + '</strong> weinig aanwezig: ' + esc(G.ELEMENT[e].weinig.toLowerCase()) + '.');
+      });
+      an.sterkKw.split(' en ').forEach(function (k) {
+        regels.push('<strong style="text-transform:capitalize">' + esc(k) + '</strong> (' + esc(G.KWALITEIT[k].thema.toLowerCase()) + '): ' + esc(G.KWALITEIT[k].sterk.toLowerCase()) + '.');
+      });
+      var ontbreekt = AN.ELEMENTEN.filter(function (e) { return an.elementen[e] <= 1; });
+      return '<div class="kolom" style="gap:6px">' + regels.map(function (r) { return '<p class="body-sm zacht">' + r + '</p>'; }).join('') +
+        (ontbreekt.length ? '<p class="body-sm" style="color:var(--primary)">Ontbrekend element: ' + esc(ontbreekt.join(', ')) + '. ' + esc(G.VUISTREGEL) + '</p>' : '') + '</div>';
+    }
+
+    var dom = an.dominant.map(function (d, i) {
+      return '<a class="lijst-rij" href="#/punt/' + d.punt + '">' +
+        '<span class="bol goud"><span class="glyf">' + C.PLANETEN[d.punt].symbool + '</span></span>' +
+        '<div class="kolom" style="gap:2px;flex:1"><span class="headline-sm">' + (i + 1) + '. ' +
+        esc(C.PLANETEN[d.punt].naam) + ' in ' + esc(D.tekenNaam(p[d.punt].teken)) + '</span>' +
+        '<span class="body-sm zacht">' + esc(C.PLANETEN[d.punt].domein) + '</span>' +
+        '<span class="body-sm gedempt">Kracht: ' + esc(G.PLANEET[d.punt].kracht.toLowerCase()) +
+        ' · schaduw: ' + esc(G.PLANEET[d.punt].schaduw.toLowerCase()) + '</span></div>' +
+        '<span class="chip neutraal">' + d.score.toFixed(1).replace('.', ',') + '</span></a>';
+    }).join('');
+
+    var patronen = an.patronen.length
+      ? an.patronen.map(function (pt) {
+          return '<div class="glas vulling kolom" style="gap:4px"><strong>' + esc(AN.patroonTekst(pt)) + '</strong>' +
+            '<span class="body-sm gedempt">' + esc(G.PATROON[pt.soort].opbouw) + '</span>' +
+            '<span class="body-sm zacht">' + esc(AN.patroonUitleg(pt.soort)) + '</span></div>';
+        }).join('')
+      : '<p class="body-sm zacht">Geen stelliums, grote driehoeken of T-vierkanten. Je horoscoop is evenwichtig verdeeld ' +
+        'en zonder een enkel overheersend patroon.</p>';
+
+    var waard = an.waardigheden.length
+      ? an.waardigheden.map(function (w) {
+          var sterk = w.soort === 'domicilie' || w.soort === 'exaltatie';
+          return '<div class="glas vulling kolom" style="gap:6px"><div class="rij-tussen"><span>' + C.PLANETEN[w.punt].symbool + ' ' +
+            esc(C.PLANETEN[w.punt].naam) + ' in ' + esc(D.tekenNaam(p[w.punt].teken)) + '</span>' +
+            '<span class="chip ' + (sterk ? 'harmonisch' : 'spanning') + '">' + esc(w.label) + '</span></div>' +
+            '<span class="body-sm zacht">' + esc(G.WAARDIGHEID[w.soort]) + '</span></div>';
+        }).join('')
+      : '<p class="body-sm zacht">Geen planeet staat in eigen of tegenovergesteld teken.</p>';
+
+    var h = an.halfronden;
+    var huizen = an.huizen
+      ? '<section class="sectie opduiken"><h3 class="headline-sm">Huizen en hun heersers</h3>' +
+        '<div class="glas" style="overflow:hidden">' + an.huizen.map(function (x) {
+          return '<div class="lijst-rij"><span class="bol" style="width:34px;height:34px;flex:none">' + x.huis + '</span>' +
+            '<div class="kolom" style="gap:2px;flex:1"><span>' + esc(D.tekenNaam(x.teken)) +
+            (x.bewoners.length ? ' · ' + esc(x.bewoners.map(AN.naamVan).join(', ')) : '') + '</span>' +
+            '<span class="body-sm zacht">' + esc(AN.HUIS_DOMEIN[x.huis - 1]) + '</span>' +
+            '<span class="body-sm gedempt">' + esc(G.HUIS[x.huis - 1].type) + ' · ' + esc(G.HUIS[x.huis - 1].vraag) + '</span>' +
+            '<span class="body-sm gedempt">Heerser ' + esc(AN.naamVan(x.heerser)) +
+            (x.heerserHuis ? ' staat in huis ' + x.heerserHuis : '') + '</span></div></div>';
+        }).join('') + '</div>' +
+        '<details class="uitklap glas"><summary><span style="flex:1">Hoe lees je een huis?</span>' +
+        '<span class="chevron">' + ico('chevron-down') + '</span></summary><div class="inhoud">' +
+        '<ol class="body-sm zacht" style="padding-left:18px;display:flex;flex-direction:column;gap:6px">' +
+        G.HUIS_LEZEN.map(function (r) { return '<li><strong>' + esc(r[0]) + '</strong>: ' + esc(r[1]) + '</li>'; }).join('') +
+        '</ol><p class="body-sm gedempt" style="margin-top:8px">' + esc(G.HUIS_LEEG) + '</p></div></details></section>'
+      : '';
+
+    function retroSectie(p) {
+      var lijst = ['mercurius', 'venus', 'mars', 'jupiter', 'saturnus', 'uranus', 'neptunus', 'pluto']
+        .filter(function (k) { return p[k] && p[k].retrograde; });
+      if (!lijst.length) return '';
+      return '<section class="sectie opduiken"><h3 class="headline-sm">Retrograde planeten</h3>' +
+        '<div class="glas" style="overflow:hidden">' + lijst.map(function (k) {
+          return '<div class="lijst-rij"><span class="bol"><span class="glyf">' + C.PLANETEN[k].symbool + '</span></span>' +
+            '<div class="kolom" style="gap:2px;flex:1"><strong>' + esc(C.PLANETEN[k].naam) + ' retrograde</strong>' +
+            '<span class="body-sm zacht">' + esc(G.retrograde(k)) + '</span></div></div>';
+        }).join('') + '</div></section>';
+    }
+
+    function aspectSectie(natal) {
+      var strak = natal.aspecten.slice().sort(function (x, y) { return x.orb - y.orb; })
+        .filter(function (x) { return x.orb < 3; }).slice(0, 6);
+      if (!strak.length) return '';
+      return '<section class="sectie opduiken"><h3 class="headline-sm">Strakste aspecten</h3>' +
+        strak.map(function (x) {
+          var t = D.aspectTekst(x.a, x.b, x.type), g = G.ASPECT[x.type];
+          var gen = G.PLANEET[x.a].groep === 'generatie' && G.PLANEET[x.b].groep === 'generatie';
+          return '<div class="glas vulling kolom" style="gap:6px"><div class="rij-tussen"><strong>' + esc(t.titel) + '</strong>' +
+            '<span class="chip ' + t.aard + '">' + x.orb.toFixed(1).replace('.', ',') + '°</span></div>' +
+            '<span class="body-sm zacht">' + esc(g.werking) + '</span>' +
+            '<span class="body-sm gedempt">Vraag: ' + esc(g.vraag) + '</span>' +
+            (gen ? '<span class="body-sm gedempt">' + esc(G.ASPECT_GENERATIE) + '</span>' : '') + '</div>';
+        }).join('') +
+        '<details class="uitklap glas"><summary><span style="flex:1">Welke aspecten wegen zwaarder?</span>' +
+        '<span class="chevron">' + ico('chevron-down') + '</span></summary><div class="inhoud">' +
+        '<ul class="body-sm zacht" style="padding-left:18px;display:flex;flex-direction:column;gap:6px">' +
+        G.ASPECT_WEGING.map(function (r) { return '<li><strong>' + esc(r[0]) + '</strong>: ' + esc(r[1]) + '</li>'; }).join('') +
+        '</ul></div></details></section>';
+    }
+
+    function leesgids() {
+      function uitklap(titel, inhoud) {
+        return '<details class="uitklap glas" style="margin-bottom:10px"><summary><span style="flex:1">' + esc(titel) + '</span>' +
+          '<span class="chevron">' + ico('chevron-down') + '</span></summary><div class="inhoud">' + inhoud + '</div></details>';
+      }
+      function lijst(rijen, tag) {
+        return '<' + tag + ' class="body-sm zacht" style="padding-left:18px;display:flex;flex-direction:column;gap:6px">' +
+          rijen.map(function (r) { return '<li><strong>' + esc(r[0]) + '</strong>: ' + esc(r[1]) + '</li>'; }).join('') + '</' + tag + '>';
+      }
+      return '<section class="sectie opduiken"><h3 class="headline-sm">Leesgids</h3>' +
+        uitklap('Zo lees je een horoscoop in twaalf stappen', lijst(G.STAPPEN, 'ol')) +
+        uitklap('Drievoudige bevestiging', '<p class="body-sm zacht">' + esc(G.DRIEVOUDIG) + '</p>') +
+        uitklap('Tegenstrijdigheden', '<p class="body-sm zacht">' + esc(G.TEGENSTRIJDIG) + '</p>') +
+        uitklap('Veelgemaakte fouten', lijst(G.FOUTEN, 'ul')) +
+        uitklap('Begrippenlijst', lijst(G.BEGRIPPEN, 'ul')) + '</section>';
+    }
+
+    var fase = an.maanfase;
+    return '<section class="kolom opduiken" style="gap:10px;text-align:center">' +
+      '<h1 class="display goud">Diepe analyse</h1>' +
+      '<p class="body-lg zacht">Hoe de delen van je horoscoop samenwerken, niet alleen wat ze elk apart zijn.</p></section>' +
+
+      '<section class="sectie opduiken"><h3 class="headline-sm">Balans</h3>' +
+      '<div class="glas vulling kolom" style="gap:14px">' +
+      '<p class="body-sm zacht">Sterkste element: <strong>' + esc(an.sterkEl) + '</strong>, zwakste: <strong>' +
+      esc(an.zwakEl) + '</strong>. Dominante kwaliteit: <strong>' + esc(an.sterkKw) + '</strong>.</p>' +
+      balansDuiding(an) +
+      groep(AN.ELEMENTEN, an.elementen, KLEUR) + '<hr style="border:0;border-top:1px solid rgba(255,255,255,.08);width:100%">' +
+      groep(AN.KWALITEITEN, an.kwaliteiten) + '</div>' +
+      '<p class="hint">Zon, maan en ascendant tellen twee, Mercurius t/m Saturnus en MC een, de buitenplaneten een half.</p>' +
+      (h ? '<div class="raster-2"><div class="glas vulling kolom"><span class="label-caps gedempt">Boven / onder</span>' +
+        '<strong>' + h.boven + ' / ' + h.onder + '</strong><span class="body-sm zacht">' +
+        (h.boven > h.onder ? 'Naar buiten gericht' : h.boven < h.onder ? 'Naar binnen gericht' : 'In evenwicht') + '</span></div>' +
+        '<div class="glas vulling kolom"><span class="label-caps gedempt">Oost / west</span>' +
+        '<strong>' + h.oost + ' / ' + h.west + '</strong><span class="body-sm zacht">' +
+        (h.oost > h.west ? 'Zelf initiatief nemen' : h.oost < h.west ? 'Reageren op anderen' : 'In evenwicht') +
+        '</span></div></div>' : '') + '</section>' +
+
+      '<section class="sectie opduiken"><h3 class="headline-sm">Dominante planeten</h3>' +
+      '<div class="glas" style="overflow:hidden">' + dom + '</div>' +
+      (an.heerser ? '<p class="hint">Horoscoopheerser: ' + esc(AN.naamVan(an.heerser)) + ' in ' +
+        esc(D.tekenNaam(p[an.heerser].teken)) + ', huis ' + p[an.heerser].huis + '. Dat is de rode draad van je horoscoop.</p>'
+        : '<p class="hint">Zonder geboortetijd is er geen horoscoopheerser.</p>') + '</section>' +
+
+      '<section class="sectie opduiken"><h3 class="headline-sm">Patronen</h3>' + patronen + '</section>' +
+
+      '<section class="sectie opduiken"><h3 class="headline-sm">Waardigheden</h3>' + waard + '</section>' +
+
+      '<section class="sectie opduiken"><h3 class="headline-sm">Geboortemaanfase</h3>' +
+      '<div class="glas vulling kolom" style="gap:4px"><strong>' + esc(fase.naam) + '</strong>' +
+      '<span class="body-sm zacht">' + esc(G.MAANFASE[Math.floor(fase.hoek / 45) % 8]) + '</span>' +
+      '<span class="body-sm gedempt">' + Math.round(fase.hoek) + '° tussen zon en maan</span></div></section>' +
+
+      retroSectie(p) +
+      aspectSectie(natal) +
+      huizen +
+      leesgids() +
+
+      '<a class="lijst-rij glas opduiken" href="#/werkbladen" style="text-decoration:none;color:inherit">' + ico('pencil') +
+      '<span style="flex:1">Werkbladen: ordenen en zelf duiden</span>' +
+      '<span class="pijl">' + ico('chevron-right') + '</span></a>' +
+
+      '<a class="lijst-rij glas opduiken" href="#/prompts" style="text-decoration:none;color:inherit">' + ico('chat') +
+      '<span style="flex:1">Prompts: werk, liefde, transits en meer</span>' +
+      '<span class="pijl">' + ico('chevron-right') + '</span></a>' +
+
+      '<section class="sectie opduiken"><h3 class="headline-sm">Rapport meenemen</h3>' +
+      '<button class="knop knop-vol" data-actie="analyse-rapport">' + ico('book', 'icoon-klein') + ' Rapport downloaden (.md)</button>' +
+      '<button class="knop knop-spook knop-vol" data-actie="analyse-prompt">' + ico('chat', 'icoon-klein') + ' Prompt voor ChatGPT kopiëren</button>' +
+      '<p class="hint">De prompt bevat al je berekende gegevens. Plak hem in een taalmodel en je krijgt een uitgewerkt verhaal. ' +
+      'Astrologie is symbolisch en niet wetenschappelijk bevestigd; gebruik het voor reflectie.</p></section>';
+  };
+
+  /* ---- werkbladen ---- */
+
+  function wbWaarden() {
+    var n = staat.profiel.naam;
+    if (!staat.werkbladen[n]) staat.werkbladen[n] = {};
+    return staat.werkbladen[n];
+  }
+
+  function wbVeld(veld, w, ph, rijen) {
+    return '<textarea data-wb="' + esc(veld) + '" rows="' + (rijen || 2) + '" placeholder="' + esc(ph || '') + '" ' +
+      'aria-label="' + esc(veld) + '">' + esc(w[veld] || '') + '</textarea>';
+  }
+
+  function wbBlad(b, w, open) {
+    var inhoud = '<p class="body-sm zacht" style="margin-bottom:10px">' + esc(b.intro) + '</p>';
+    if (b.themakaart) {
+      var aantal = Math.max(3, +w['w6-aantal'] || 3);
+      for (var i = 0; i < aantal; i++) {
+        inhoud += '<div class="glas vulling kolom" style="gap:8px;margin-bottom:10px">' +
+          [['t', 'Thema'], ['a1', 'Aanwijzing 1'], ['a2', 'Aanwijzing 2'], ['a3', 'Aanwijzing 3']].map(function (c) {
+            return '<div class="veld"><label>' + c[1] + '</label>' + wbVeld('w6-' + i + '-' + c[0], w, '', 1) + '</div>';
+          }).join('') +
+          '<div class="veld"><label>Kernthema?</label><select data-wb="w6-' + i + '-k">' +
+          ['', 'ja', 'nee'].map(function (o) {
+            return '<option value="' + o + '"' + ((w['w6-' + i + '-k'] || '') === o ? ' selected' : '') + '>' + (o || '—') + '</option>';
+          }).join('') + '</select></div></div>';
+      }
+      inhoud += '<button class="knop knop-spook knop-vol" data-actie="wb-rij">' + ico('plus', 'icoon-klein') + ' Thema toevoegen</button>';
+    } else {
+      inhoud += b.rijen.map(function (r) {
+        return '<div class="glas vulling kolom" style="gap:8px;margin-bottom:10px"><strong>' + esc(r.label) + '</strong>' +
+          r.cellen.map(function (c) {
+            return c.veld
+              ? '<div class="veld"><label>' + esc(c.k) + '</label>' + wbVeld(c.veld, w, c.ph) + '</div>'
+              : '<div class="kolom" style="gap:2px"><span class="label-caps gedempt">' + esc(c.k) + '</span>' +
+                '<span class="body-sm">' + esc(c.v) + '</span></div>';
+          }).join('') + '</div>';
+      }).join('');
+      if (b.extra) inhoud += '<div class="veld"><label>' + esc(b.extra.k) + '</label>' + wbVeld(b.extra.veld, w, '', 4) + '</div>';
+    }
+    return '<details class="uitklap glas" style="margin-bottom:10px"' + (open ? ' open' : '') + '><summary>' +
+      '<span class="chip neutraal">' + b.id.slice(1) + '</span>' +
+      '<span style="flex:1">' + esc(b.titel) + '</span><span class="chevron">' + ico('chevron-down') + '</span></summary>' +
+      '<div class="inhoud">' + inhoud + '</div></details>';
+  }
+
+  function wbBladen() {
+    var natal = mijnHoroscoop();
+    var trs = A.transits(natal, nuJD()).filter(function (t) { return t.sterkte > 0.12; });
+    return WB.bouw(natal, AN.analyseer(natal), staat.profiel, trs);
+  }
+
+  schermen.werkbladen = function () {
+    var w = wbWaarden();
+    return '<section class="kolom opduiken" style="gap:10px;text-align:center">' +
+      '<h1 class="display goud">Werkbladen</h1>' +
+      '<p class="body-lg zacht">Zeven bladen om je analyse te ordenen. Wat de horoscoop al weet is ingevuld; ' +
+      'de duiding is aan jou.</p></section>' +
+      '<section class="opduiken">' + wbBladen().map(function (b, i) { return wbBlad(b, w, i === 0); }).join('') + '</section>' +
+      '<button class="knop knop-vol" data-actie="wb-export">' + ico('book', 'icoon-klein') + ' Werkbladen downloaden (.md)</button>' +
+      '<p class="hint">Wat je invult blijft alleen in deze browser bewaard, per persoon. ' +
+      'Met de download neem je het mee.</p>';
+  };
+
+  /* ---- promptbibliotheek ---- */
+
+  var promptRelatie = '';
+
+  function kopieer(tekst, bestand) {
+    function terugval() { download(bestandsNaam(bestand + '.md'), tekst, 'text/markdown'); toon('Prompt gedownload'); }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(tekst).then(function () { toon('Prompt gekopieerd'); }, terugval);
+    } else terugval();
+  }
+
+  function promptTekst(id) {
+    var natal = mijnHoroscoop();
+    var ctx = {
+      natal: natal, an: AN.analyseer(natal), profiel: staat.profiel,
+      datum: new Date().toISOString().slice(0, 10),
+      leeftijd: Math.floor((new Date() - new Date(staat.profiel.datum)) / (365.2425 * 86400000)) + ' jaar',
+      transits: A.transits(natal, nuJD()).filter(function (t) { return t.sterkte > 0.12 && t.transit !== 'maan'; })
+        .slice(0, 12).map(function (t) {
+          return C.PLANETEN[t.transit].naam + (t.retrograde ? ' (retrograde)' : '') + ' ' + t.type + ' natale ' +
+            C.PLANETEN[t.natal].naam + ' (' + t.orb.toFixed(1).replace('.', ',') + '°)';
+        }),
+      partner: null
+    };
+    var r = staat.relaties.filter(function (x) { return x.id === promptRelatie; })[0] || staat.relaties[0];
+    if (r) { var h = horoscoop(r, r.id); ctx.partner = { natal: h, an: AN.analyseer(h), profiel: r }; }
+    return PR.bouw(id, ctx);
+  }
+
+  schermen.prompts = function () {
+    var kaart = function (id, titel, uitleg, extra) {
+      return '<article class="glas vulling kolom opduiken" style="gap:10px">' +
+        '<div class="rij" style="gap:10px"><span class="chip neutraal">' + id + '</span>' +
+        '<strong class="headline-sm" style="flex:1">' + esc(titel) + '</strong></div>' +
+        '<p class="body-sm zacht">' + esc(uitleg) + '</p>' + (extra || '') +
+        '<button class="knop knop-spook knop-vol" data-actie="prompt-kopieer" data-id="' + id + '">' +
+        ico('chat', 'icoon-klein') + ' Kopieer met je gegevens</button></article>';
+    };
+    var rel = staat.relaties.length
+      ? '<div class="veld"><label>Vergelijk met</label><select data-prompt-relatie>' +
+        staat.relaties.map(function (r) {
+          return '<option value="' + esc(r.id) + '"' + (r.id === promptRelatie ? ' selected' : '') + '>' + esc(r.naam) + '</option>';
+        }).join('') + '</select></div>'
+      : '<p class="hint">Voeg eerst iemand toe bij Match om hem of haar te kunnen vergelijken.</p>';
+    return '<section class="kolom opduiken" style="gap:10px;text-align:center">' +
+      '<h1 class="display goud">Prompts</h1>' +
+      '<p class="body-lg zacht">Vragen voor ChatGPT of een ander taalmodel. LUNA rekent, het model duidt: ' +
+      'de gegevens worden er automatisch achter gezet.</p></section>' +
+      '<section class="sectie">' +
+      kaart('H-00', 'Volledige analyse', 'Begin hier: een uitgewerkt verhaal in tien hoofdstukken.') +
+      PR.LIJST.map(function (p) { return kaart(p.id, p.titel, p.uitleg, p.inhoud === 'tweeen' ? rel : ''); }).join('') +
+      '</section>' +
+      '<p class="hint">Laat een taalmodel nooit zelf posities uitrekenen; dat gaat regelmatig mis. ' +
+      'Astrologie is symbolisch en niet wetenschappelijk bevestigd.</p>';
   };
 
   /* ---- detail van een punt ---- */
@@ -822,6 +1151,20 @@
 
   /* ---- transits ---- */
 
+  function levenscycli() {
+    var geb = new Date(staat.profiel.datum), nu = new Date();
+    var leeftijd = (nu - geb) / (365.2425 * 86400000);
+    return '<section class="sectie opduiken"><h3 class="headline-sm">Levenscycli</h3>' +
+      '<div class="glas" style="overflow:hidden">' + G.CYCLI.map(function (c) {
+        var tekst = c.leeftijd.map(function (l) { return l[0] === l[1] ? l[0] : l[0] + '-' + l[1]; }).join(', ');
+        var actief = c.leeftijd.some(function (l) { return leeftijd >= l[0] - 0.5 && leeftijd <= l[1] + 0.5; });
+        return '<div class="lijst-rij"><div class="kolom" style="gap:2px;flex:1"><strong>' + esc(c.naam) + '</strong>' +
+          '<span class="body-sm zacht">' + esc(c.thema) + '</span>' +
+          '<span class="body-sm gedempt">Rond ' + esc(tekst) + ' jaar</span></div>' +
+          (actief ? '<span class="chip neutraal">nu</span>' : '') + '</div>';
+      }).join('') + '</div><p class="hint">Je bent nu ongeveer ' + Math.floor(leeftijd) + ' jaar.</p></section>';
+  }
+
   schermen.transits = function () {
     var natal = mijnHoroscoop();
     var trs = A.transits(natal, nuJD()).filter(function (t) { return t.sterkte > 0.12; });
@@ -851,7 +1194,15 @@
       '<p class="body-lg zacht">Kosmische bewegingen die nu in verbinding staan met jouw geboortehoroscoop.</p></section>' +
       (kaarten || '<div class="leeg">Op dit moment zijn er geen aspecten binnen orb.</div>') +
       '<p class="hint">Een transit werkt zolang het aspect binnen orb blijft. Hoe trager de planeet, ' +
-      'hoe langer dat duurt: de maan enkele uren, Pluto soms jaren.</p>';
+      'hoe langer dat duurt: de maan enkele uren, Pluto soms jaren.</p>' +
+      '<section class="sectie opduiken"><h3 class="headline-sm">Hoe lang duurt een transit?</h3>' +
+      '<div class="glas" style="overflow:hidden">' + Object.keys(G.TRANSIT_DUUR).map(function (k) {
+        var t = G.TRANSIT_DUUR[k];
+        return '<div class="lijst-rij"><span class="bol"><span class="glyf">' + C.PLANETEN[k].symbool + '</span></span>' +
+          '<div class="kolom" style="gap:2px;flex:1"><strong>' + esc(C.PLANETEN[k].naam) + '</strong>' +
+          '<span class="body-sm zacht">' + esc(t[1]) + '</span></div><span class="chip">' + esc(t[0]) + '</span></div>';
+      }).join('') + '</div></section>' +
+      levenscycli();
   };
 
   /* ---- ontdekken ---- */
@@ -1154,6 +1505,9 @@
 
     var menu = [
       ['history', 'Mijn geboortegegevens', '#/gegevens/profiel', 'pencil'],
+      ['analyse', 'Diepe analyse', '#/analyse', 'scale'],
+      ['werkbladen', 'Werkbladen', '#/werkbladen', 'pencil'],
+      ['prompts', 'Prompts voor ChatGPT', '#/prompts', 'chat'],
       ['bewaard', 'Opgeslagen inzichten', '#/bewaard', 'bookmark'],
       ['relaties', 'Relaties', '#/match', 'users'],
       ['meldingen', 'Meldingen', '#/meldingen', 'bell'],
@@ -1799,6 +2153,33 @@
       ga('#/mijn-duiding');
     }
 
+    else if (actie === 'wb-rij') {
+      var wv = wbWaarden();
+      wv['w6-aantal'] = Math.max(3, +wv['w6-aantal'] || 3) + 1;
+      bewaren();
+      var openIds = Array.prototype.map.call(scherm.querySelectorAll('details'), function (d) { return d.open; });
+      render();
+      Array.prototype.forEach.call(scherm.querySelectorAll('details'), function (d, i) { d.open = openIds[i]; });
+    }
+
+    else if (actie === 'wb-export') {
+      download(bestandsNaam('werkbladen.md'), WB.markdown(wbBladen(), wbWaarden(), staat.profiel), 'text/markdown');
+    }
+
+    else if (actie === 'analyse-rapport') {
+      var nat = mijnHoroscoop();
+      download(bestandsNaam('rapport.md'), AN.rapport(nat, AN.analyseer(nat), staat.profiel), 'text/markdown');
+    }
+
+    else if (actie === 'analyse-prompt') {
+      var nat2 = mijnHoroscoop();
+      kopieer(AN.prompt(nat2, AN.analyseer(nat2), staat.profiel), 'prompt');
+    }
+
+    else if (actie === 'prompt-kopieer') {
+      kopieer(promptTekst(knop.dataset.id), 'prompt-' + knop.dataset.id.toLowerCase());
+    }
+
     else if (actie === 'duiding-uitvoer') {
       var blob = new Blob([ED.exporteer()], { type: 'application/json' });
       var url = URL.createObjectURL(blob);
@@ -1884,6 +2265,12 @@
       if (opslaanKnop) {
         opslaanKnop.disabled = !(formulier.naam && formulier.datum && formulier.plaats);
       }
+    }
+    if (e.target.hasAttribute && e.target.hasAttribute('data-prompt-relatie')) { promptRelatie = e.target.value; return; }
+    if (e.target.dataset.wb) {
+      wbWaarden()[e.target.dataset.wb] = e.target.value;
+      bewaren();
+      return;
     }
     if (veld === 'eigen') { eigenTekst = e.target.value; return; }
     if (veld === 'eigenBron') { eigenBron = e.target.value; return; }
