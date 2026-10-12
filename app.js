@@ -5,7 +5,7 @@
 
   var A = window.LunaAstro, C = window.LunaContent,
       D = window.LunaDuiding, PL = window.LunaPlaatsen, E = window.LunaEigenData,
-      ED = window.LunaEigenDuiding, AN = window.LunaAnalyse, G = window.LunaGids, WB = window.LunaWerkbladen;
+      ED = window.LunaEigenDuiding, AN = window.LunaAnalyse, G = window.LunaGids, WB = window.LunaWerkbladen, PR = window.LunaPrompts;
 
   var scherm = document.getElementById('scherm');
   var navigatie = document.getElementById('navigatie');
@@ -869,6 +869,10 @@
       '<span style="flex:1">Werkbladen: ordenen en zelf duiden</span>' +
       '<span class="pijl">' + ico('chevron-right') + '</span></a>' +
 
+      '<a class="lijst-rij glas opduiken" href="#/prompts" style="text-decoration:none;color:inherit">' + ico('chat') +
+      '<span style="flex:1">Prompts: werk, liefde, transits en meer</span>' +
+      '<span class="pijl">' + ico('chevron-right') + '</span></a>' +
+
       '<section class="sectie opduiken"><h3 class="headline-sm">Rapport meenemen</h3>' +
       '<button class="knop knop-vol" data-actie="analyse-rapport">' + ico('book', 'icoon-klein') + ' Rapport downloaden (.md)</button>' +
       '<button class="knop knop-spook knop-vol" data-actie="analyse-prompt">' + ico('chat', 'icoon-klein') + ' Prompt voor ChatGPT kopiëren</button>' +
@@ -938,6 +942,62 @@
       '<button class="knop knop-vol" data-actie="wb-export">' + ico('book', 'icoon-klein') + ' Werkbladen downloaden (.md)</button>' +
       '<p class="hint">Wat je invult blijft alleen in deze browser bewaard, per persoon. ' +
       'Met de download neem je het mee.</p>';
+  };
+
+  /* ---- promptbibliotheek ---- */
+
+  var promptRelatie = '';
+
+  function kopieer(tekst, bestand) {
+    function terugval() { download(bestandsNaam(bestand + '.md'), tekst, 'text/markdown'); toon('Prompt gedownload'); }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(tekst).then(function () { toon('Prompt gekopieerd'); }, terugval);
+    } else terugval();
+  }
+
+  function promptTekst(id) {
+    var natal = mijnHoroscoop();
+    var ctx = {
+      natal: natal, an: AN.analyseer(natal), profiel: staat.profiel,
+      datum: new Date().toISOString().slice(0, 10),
+      leeftijd: Math.floor((new Date() - new Date(staat.profiel.datum)) / (365.2425 * 86400000)) + ' jaar',
+      transits: A.transits(natal, nuJD()).filter(function (t) { return t.sterkte > 0.12 && t.transit !== 'maan'; })
+        .slice(0, 12).map(function (t) {
+          return C.PLANETEN[t.transit].naam + (t.retrograde ? ' (retrograde)' : '') + ' ' + t.type + ' natale ' +
+            C.PLANETEN[t.natal].naam + ' (' + t.orb.toFixed(1).replace('.', ',') + '°)';
+        }),
+      partner: null
+    };
+    var r = staat.relaties.filter(function (x) { return x.id === promptRelatie; })[0] || staat.relaties[0];
+    if (r) { var h = horoscoop(r, r.id); ctx.partner = { natal: h, an: AN.analyseer(h), profiel: r }; }
+    return PR.bouw(id, ctx);
+  }
+
+  schermen.prompts = function () {
+    var kaart = function (id, titel, uitleg, extra) {
+      return '<article class="glas vulling kolom opduiken" style="gap:10px">' +
+        '<div class="rij" style="gap:10px"><span class="chip neutraal">' + id + '</span>' +
+        '<strong class="headline-sm" style="flex:1">' + esc(titel) + '</strong></div>' +
+        '<p class="body-sm zacht">' + esc(uitleg) + '</p>' + (extra || '') +
+        '<button class="knop knop-spook knop-vol" data-actie="prompt-kopieer" data-id="' + id + '">' +
+        ico('chat', 'icoon-klein') + ' Kopieer met je gegevens</button></article>';
+    };
+    var rel = staat.relaties.length
+      ? '<div class="veld"><label>Vergelijk met</label><select data-prompt-relatie>' +
+        staat.relaties.map(function (r) {
+          return '<option value="' + esc(r.id) + '"' + (r.id === promptRelatie ? ' selected' : '') + '>' + esc(r.naam) + '</option>';
+        }).join('') + '</select></div>'
+      : '<p class="hint">Voeg eerst iemand toe bij Match om hem of haar te kunnen vergelijken.</p>';
+    return '<section class="kolom opduiken" style="gap:10px;text-align:center">' +
+      '<h1 class="display goud">Prompts</h1>' +
+      '<p class="body-lg zacht">Vragen voor ChatGPT of een ander taalmodel. LUNA rekent, het model duidt: ' +
+      'de gegevens worden er automatisch achter gezet.</p></section>' +
+      '<section class="sectie">' +
+      kaart('H-00', 'Volledige analyse', 'Begin hier: een uitgewerkt verhaal in tien hoofdstukken.') +
+      PR.LIJST.map(function (p) { return kaart(p.id, p.titel, p.uitleg, p.inhoud === 'tweeen' ? rel : ''); }).join('') +
+      '</section>' +
+      '<p class="hint">Laat een taalmodel nooit zelf posities uitrekenen; dat gaat regelmatig mis. ' +
+      'Astrologie is symbolisch en niet wetenschappelijk bevestigd.</p>';
   };
 
   /* ---- detail van een punt ---- */
@@ -1447,6 +1507,7 @@
       ['history', 'Mijn geboortegegevens', '#/gegevens/profiel', 'pencil'],
       ['analyse', 'Diepe analyse', '#/analyse', 'scale'],
       ['werkbladen', 'Werkbladen', '#/werkbladen', 'pencil'],
+      ['prompts', 'Prompts voor ChatGPT', '#/prompts', 'chat'],
       ['bewaard', 'Opgeslagen inzichten', '#/bewaard', 'bookmark'],
       ['relaties', 'Relaties', '#/match', 'users'],
       ['meldingen', 'Meldingen', '#/meldingen', 'bell'],
@@ -2112,11 +2173,11 @@
 
     else if (actie === 'analyse-prompt') {
       var nat2 = mijnHoroscoop();
-      var tekst = AN.prompt(nat2, AN.analyseer(nat2), staat.profiel);
-      if (navigator.clipboard && navigator.clipboard.writeText) {
-        navigator.clipboard.writeText(tekst).then(function () { toon('Prompt gekopieerd'); },
-          function () { download(bestandsNaam('prompt.md'), tekst, 'text/markdown'); toon('Prompt gedownload'); });
-      } else { download(bestandsNaam('prompt.md'), tekst, 'text/markdown'); toon('Prompt gedownload'); }
+      kopieer(AN.prompt(nat2, AN.analyseer(nat2), staat.profiel), 'prompt');
+    }
+
+    else if (actie === 'prompt-kopieer') {
+      kopieer(promptTekst(knop.dataset.id), 'prompt-' + knop.dataset.id.toLowerCase());
     }
 
     else if (actie === 'duiding-uitvoer') {
@@ -2205,6 +2266,7 @@
         opslaanKnop.disabled = !(formulier.naam && formulier.datum && formulier.plaats);
       }
     }
+    if (e.target.hasAttribute && e.target.hasAttribute('data-prompt-relatie')) { promptRelatie = e.target.value; return; }
     if (e.target.dataset.wb) {
       wbWaarden()[e.target.dataset.wb] = e.target.value;
       bewaren();

@@ -400,7 +400,7 @@
 
   /* ---------- prompt voor een taalmodel ---------- */
 
-  function prompt(chart, an, profiel) {
+  function gegevens(chart, an, profiel) {
     var p = chart.punten, tb = an.tijdBekend;
     var data = {
       invoer: {
@@ -429,6 +429,11 @@
       patronen: an.patronen.map(patroonTekst),
       maanfase: { naam: an.maanfase.naam, uitleg: an.maanfase.uitleg, hoek: +an.maanfase.hoek.toFixed(1) }
     };
+    return data;
+  }
+
+  function prompt(chart, an, profiel) {
+    var data = gegevens(chart, an, profiel);
     return '# ROL\n' +
       'Je bent een ervaren psychologisch astrologe (moderne, humanistische school) die\n' +
       'helder, warm en concreet schrijft in het Nederlands. Je gebruikt astrologie als\n' +
@@ -462,7 +467,7 @@
   }
 
   global.LunaAnalyse = {
-    analyseer: analyseer, rapport: rapport, prompt: prompt,
+    analyseer: analyseer, rapport: rapport, prompt: prompt, gegevens: gegevens,
     patroonTekst: patroonTekst, patroonUitleg: patroonUitleg,
     ELEMENTEN: ELEMENTEN, KWALITEITEN: KWALITEITEN, HUIS_DOMEIN: HUIS_DOMEIN,
     naamVan: naamVan, positieTekst: positieTekst
