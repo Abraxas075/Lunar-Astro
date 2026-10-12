@@ -16,6 +16,8 @@
     ['Innerlijk leven', [12]]
   ];
 
+  var SAM_RIJEN = 6;
+
   function naam(k) { return AN.naamVan(k); }
   function teken(i) { return C.TEKENS[i].naam; }
   function lijst(a) { return a.length ? a.join(', ') : '–'; }
@@ -123,11 +125,20 @@
         { k: 'Periode', v: 'nu' + (dd ? ' (' + dd[0].toLowerCase() + ')' : '') },
         { k: 'Natale factor', v: naam(t.natal) },
         { k: 'Thema', v: dd ? dd[1] : '–' },
-        { k: 'Advies / reflectievraag', veld: 'w7-' + i }] };
+        { k: 'Advies / reflectievraag', veld: global.LunaRapport.transitSleutel(t), ph: G.ASPECT[t.type].vraag }] };
     });
     bladen.push({
       id: 'w7', titel: 'Transits en timing', intro: rij7.length ? 'De sterkste lopende transits, voorgevuld. Wat vraagt nu aandacht?' : 'Op dit moment zijn er geen aspecten binnen orb.',
       rijen: rij7
+    });
+
+    bladen.push({
+      id: 'w8', titel: 'Rapport', samenvatting: true,
+      intro: 'Wat alleen jij kunt schrijven. Het rapport neemt dit over; laat je iets leeg, dan zet LUNA er een aanzet neer.',
+      velden: [
+        { k: 'Kernboodschap: de rode draad in 2 tot 3 zinnen', veld: 'r-kern', rijen: 3 },
+        { k: 'Levensopdracht: het belangrijkste groeiadvies', veld: 'r-tip', rijen: 2 }
+      ]
     });
 
     return bladen;
@@ -139,6 +150,16 @@
     function val(veld) { return (waarden[veld] || '').replace(/\n/g, ' ').replace(/\|/g, '/'); }
     bladen.forEach(function (b, n) {
       r.push('## Werkblad ' + (n + 1) + ' — ' + b.titel + '\n');
+      if (b.samenvatting) {
+        b.velden.forEach(function (v) { r.push('**' + v.k + '** ' + val(v.veld) + '\n'); });
+        r.push('| Thema | Kracht | Uitdaging | Tip |\n|:--|:--|:--|:--|');
+        for (var s = 0; s < SAM_RIJEN; s++) {
+          var rij = ['t', 'k', 'u', 'tip'].map(function (x) { return val('r-sam-' + s + '-' + x); });
+          if (rij.join('')) r.push('| ' + rij.join(' | ') + ' |');
+        }
+        r.push('');
+        return;
+      }
       if (b.themakaart) {
         r.push('| Thema | Aanwijzing 1 | Aanwijzing 2 | Aanwijzing 3 | Kernthema? |\n|:--|:--|:--|:--|:--:|');
         var aantal = Math.max(3, +waarden['w6-aantal'] || 3);
@@ -161,5 +182,5 @@
     return r.join('\n');
   }
 
-  global.LunaWerkbladen = { bouw: bouw, markdown: markdown };
+  global.LunaWerkbladen = { bouw: bouw, markdown: markdown, SAM_RIJEN: SAM_RIJEN };
 })(typeof window !== 'undefined' ? window : globalThis);

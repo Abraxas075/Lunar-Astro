@@ -5,7 +5,7 @@
 
   var A = window.LunaAstro, C = window.LunaContent,
       D = window.LunaDuiding, PL = window.LunaPlaatsen, E = window.LunaEigenData,
-      ED = window.LunaEigenDuiding, AN = window.LunaAnalyse, G = window.LunaGids, WB = window.LunaWerkbladen, PR = window.LunaPrompts;
+      ED = window.LunaEigenDuiding, AN = window.LunaAnalyse, G = window.LunaGids, WB = window.LunaWerkbladen, PR = window.LunaPrompts, RA = window.LunaRapport;
 
   var scherm = document.getElementById('scherm');
   var navigatie = document.getElementById('navigatie');
@@ -874,7 +874,8 @@
       '<span class="pijl">' + ico('chevron-right') + '</span></a>' +
 
       '<section class="sectie opduiken"><h3 class="headline-sm">Rapport meenemen</h3>' +
-      '<button class="knop knop-vol" data-actie="analyse-rapport">' + ico('book', 'icoon-klein') + ' Rapport downloaden (.md)</button>' +
+      '<a class="knop knop-primair knop-vol" href="#/rapport">' + ico('book', 'icoon-klein') + ' Rapport bekijken en afdrukken</a>' +
+      '<button class="knop knop-spook knop-vol" data-actie="analyse-rapport">' + ico('book', 'icoon-klein') + ' Rapport downloaden (.md)</button>' +
       '<button class="knop knop-spook knop-vol" data-actie="analyse-prompt">' + ico('chat', 'icoon-klein') + ' Prompt voor ChatGPT kopiëren</button>' +
       '<p class="hint">De prompt bevat al je berekende gegevens. Plak hem in een taalmodel en je krijgt een uitgewerkt verhaal. ' +
       'Astrologie is symbolisch en niet wetenschappelijk bevestigd; gebruik het voor reflectie.</p></section>';
@@ -895,7 +896,19 @@
 
   function wbBlad(b, w, open) {
     var inhoud = '<p class="body-sm zacht" style="margin-bottom:10px">' + esc(b.intro) + '</p>';
-    if (b.themakaart) {
+    if (b.samenvatting) {
+      inhoud += b.velden.map(function (v) {
+        return '<div class="veld" style="margin-bottom:10px"><label>' + esc(v.k) + '</label>' + wbVeld(v.veld, w, '', v.rijen) + '</div>';
+      }).join('');
+      inhoud += '<p class="label-caps gedempt" style="margin:6px 0 10px">Samenvatting: thema, kracht, uitdaging, tip</p>';
+      for (var s = 0; s < WB.SAM_RIJEN; s++) {
+        inhoud += '<div class="glas vulling kolom" style="gap:8px;margin-bottom:10px">' +
+          [['t', 'Thema'], ['k', 'Kracht'], ['u', 'Uitdaging'], ['tip', 'Tip']].map(function (c) {
+            return '<div class="veld"><label>' + c[1] + '</label>' + wbVeld('r-sam-' + s + '-' + c[0], w, '', 1) + '</div>';
+          }).join('') + '</div>';
+      }
+      inhoud += '<a class="knop knop-spook knop-vol" href="#/rapport">' + ico('eye', 'icoon-klein') + ' Rapport bekijken</a>';
+    } else if (b.themakaart) {
       var aantal = Math.max(3, +w['w6-aantal'] || 3);
       for (var i = 0; i < aantal; i++) {
         inhoud += '<div class="glas vulling kolom" style="gap:8px;margin-bottom:10px">' +
@@ -939,7 +952,7 @@
       '<p class="body-lg zacht">Zeven bladen om je analyse te ordenen. Wat de horoscoop al weet is ingevuld; ' +
       'de duiding is aan jou.</p></section>' +
       '<section class="opduiken">' + wbBladen().map(function (b, i) { return wbBlad(b, w, i === 0); }).join('') + '</section>' +
-      '<button class="knop knop-vol" data-actie="wb-export">' + ico('book', 'icoon-klein') + ' Werkbladen downloaden (.md)</button>' +
+      '<button class="knop knop-primair knop-vol" data-actie="wb-export">' + ico('book', 'icoon-klein') + ' Werkbladen downloaden (.md)</button>' +
       '<p class="hint">Wat je invult blijft alleen in deze browser bewaard, per persoon. ' +
       'Met de download neem je het mee.</p>';
   };
@@ -998,6 +1011,49 @@
       '</section>' +
       '<p class="hint">Laat een taalmodel nooit zelf posities uitrekenen; dat gaat regelmatig mis. ' +
       'Astrologie is symbolisch en niet wetenschappelijk bevestigd.</p>';
+  };
+
+  /* ---- rapport volgens de template ---- */
+
+  function rapportModel() {
+    var natal = mijnHoroscoop();
+    return RA.model({
+      natal: natal, an: AN.analyseer(natal), profiel: staat.profiel, waarden: wbWaarden(),
+      transits: A.transits(natal, nuJD()).filter(function (t) { return t.sterkte > 0.12; }),
+      datum: new Date().toISOString().slice(0, 10)
+    });
+  }
+
+  /* Het wiel als los bestand: de kleuren komen anders uit styles.css. */
+  function wielBestand() {
+    var svg = wielSVG(mijnHoroscoop(), 760);
+    var stijl = '<style>' +
+      '.sectorlijn{stroke:rgba(255,255,255,.1);stroke-width:1}.huislijn{stroke:rgba(255,255,255,.13);stroke-width:1}' +
+      '.as{stroke:rgba(255,224,142,.55);stroke-width:1.4}.ring{fill:none;stroke:rgba(255,255,255,.14)}' +
+      '.tekenglyf{fill:#d0c5b2;font-size:13px;text-anchor:middle}' +
+      '.planeetglyf{fill:#ffe08e;font-size:15px;text-anchor:middle;font-family:Georgia,serif}' +
+      '.graadtekst{fill:#99907e;font-size:8px;text-anchor:middle}.aspectlijn{stroke-width:1;opacity:.55}' +
+      '.huisnr{fill:#99907e;font-size:9px;text-anchor:middle}</style>';
+    return '<?xml version="1.0" encoding="UTF-8"?>\n' +
+      svg.replace('<svg class="wiel"', '<svg xmlns="http://www.w3.org/2000/svg" width="760" height="760" class="wiel"')
+         .replace(/(<svg[^>]*>)/, '$1' + stijl + '<rect width="760" height="760" fill="#111417"/>');
+  }
+
+  function rapportMarkdown() {
+    var natal = mijnHoroscoop();
+    return RA.markdown(rapportModel(), bestandsNaam('wiel.svg'), AN.rapport(natal, AN.analyseer(natal), staat.profiel));
+  }
+
+  schermen.rapport = function () {
+    var model = rapportModel();
+    var aanzetten = model.some(function (x) { return x.aanzet; });
+    return '<div class="rij geen-print opduiken" style="gap:10px;flex-wrap:wrap">' +
+      '<button class="knop knop-primair" style="flex:1" data-actie="rapport-print">' + ico('share', 'icoon-klein') + ' Afdrukken of PDF</button>' +
+      '<button class="knop knop-spook" style="flex:1" data-actie="analyse-rapport">' + ico('book', 'icoon-klein') + ' Markdown</button>' +
+      '<button class="knop knop-spook" style="flex:1" data-actie="rapport-wiel">' + ico('sun', 'icoon-klein') + ' Wiel (.svg)</button></div>' +
+      (aanzetten ? '<p class="hint geen-print">Cursieve tekst is een aanzet van LUNA. Schrijf je eigen versie in de ' +
+        '<a href="#/werkbladen" style="color:var(--primary)">werkbladen</a>; die neemt het rapport over.</p>' : '') +
+      '<article class="rapport opduiken">' + RA.html(model, wielSVG(mijnHoroscoop(), 340)) + '</article>';
   };
 
   /* ---- detail van een punt ---- */
@@ -1508,6 +1564,7 @@
       ['analyse', 'Diepe analyse', '#/analyse', 'scale'],
       ['werkbladen', 'Werkbladen', '#/werkbladen', 'pencil'],
       ['prompts', 'Prompts voor ChatGPT', '#/prompts', 'chat'],
+      ['rapport', 'Rapport', '#/rapport', 'book'],
       ['bewaard', 'Opgeslagen inzichten', '#/bewaard', 'bookmark'],
       ['relaties', 'Relaties', '#/match', 'users'],
       ['meldingen', 'Meldingen', '#/meldingen', 'bell'],
@@ -2167,8 +2224,15 @@
     }
 
     else if (actie === 'analyse-rapport') {
-      var nat = mijnHoroscoop();
-      download(bestandsNaam('rapport.md'), AN.rapport(nat, AN.analyseer(nat), staat.profiel), 'text/markdown');
+      download(bestandsNaam('rapport.md'), rapportMarkdown(), 'text/markdown');
+    }
+
+    else if (actie === 'rapport-wiel') {
+      download(bestandsNaam('wiel.svg'), wielBestand(), 'image/svg+xml');
+    }
+
+    else if (actie === 'rapport-print') {
+      window.print();
     }
 
     else if (actie === 'analyse-prompt') {
