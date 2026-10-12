@@ -5,7 +5,7 @@
 
   var A = window.LunaAstro, C = window.LunaContent,
       D = window.LunaDuiding, PL = window.LunaPlaatsen, E = window.LunaEigenData,
-      ED = window.LunaEigenDuiding, AN = window.LunaAnalyse, G = window.LunaGids;
+      ED = window.LunaEigenDuiding, AN = window.LunaAnalyse, G = window.LunaGids, WB = window.LunaWerkbladen;
 
   var scherm = document.getElementById('scherm');
   var navigatie = document.getElementById('navigatie');
@@ -20,6 +20,7 @@
     profiel: null,
     relaties: [],
     bewaard: [],
+    werkbladen: {},
     instellingen: {
       dagelijks: true, tijd: '08:00', transits: true, vollemaan: true,
       nieuwemaan: true, retrograde: true, relaties: false
@@ -35,6 +36,7 @@
         profiel: s.profiel || null,
         relaties: s.relaties || [],
         bewaard: s.bewaard || [],
+        werkbladen: s.werkbladen || {},
         instellingen: Object.assign({}, standaard.instellingen, s.instellingen || {})
       };
     } catch (e) {
@@ -863,11 +865,79 @@
       huizen +
       leesgids() +
 
+      '<a class="lijst-rij glas opduiken" href="#/werkbladen" style="text-decoration:none;color:inherit">' + ico('pencil') +
+      '<span style="flex:1">Werkbladen: ordenen en zelf duiden</span>' +
+      '<span class="pijl">' + ico('chevron-right') + '</span></a>' +
+
       '<section class="sectie opduiken"><h3 class="headline-sm">Rapport meenemen</h3>' +
       '<button class="knop knop-vol" data-actie="analyse-rapport">' + ico('book', 'icoon-klein') + ' Rapport downloaden (.md)</button>' +
       '<button class="knop knop-spook knop-vol" data-actie="analyse-prompt">' + ico('chat', 'icoon-klein') + ' Prompt voor ChatGPT kopiëren</button>' +
       '<p class="hint">De prompt bevat al je berekende gegevens. Plak hem in een taalmodel en je krijgt een uitgewerkt verhaal. ' +
       'Astrologie is symbolisch en niet wetenschappelijk bevestigd; gebruik het voor reflectie.</p></section>';
+  };
+
+  /* ---- werkbladen ---- */
+
+  function wbWaarden() {
+    var n = staat.profiel.naam;
+    if (!staat.werkbladen[n]) staat.werkbladen[n] = {};
+    return staat.werkbladen[n];
+  }
+
+  function wbVeld(veld, w, ph, rijen) {
+    return '<textarea data-wb="' + esc(veld) + '" rows="' + (rijen || 2) + '" placeholder="' + esc(ph || '') + '" ' +
+      'aria-label="' + esc(veld) + '">' + esc(w[veld] || '') + '</textarea>';
+  }
+
+  function wbBlad(b, w, open) {
+    var inhoud = '<p class="body-sm zacht" style="margin-bottom:10px">' + esc(b.intro) + '</p>';
+    if (b.themakaart) {
+      var aantal = Math.max(3, +w['w6-aantal'] || 3);
+      for (var i = 0; i < aantal; i++) {
+        inhoud += '<div class="glas vulling kolom" style="gap:8px;margin-bottom:10px">' +
+          [['t', 'Thema'], ['a1', 'Aanwijzing 1'], ['a2', 'Aanwijzing 2'], ['a3', 'Aanwijzing 3']].map(function (c) {
+            return '<div class="veld"><label>' + c[1] + '</label>' + wbVeld('w6-' + i + '-' + c[0], w, '', 1) + '</div>';
+          }).join('') +
+          '<div class="veld"><label>Kernthema?</label><select data-wb="w6-' + i + '-k">' +
+          ['', 'ja', 'nee'].map(function (o) {
+            return '<option value="' + o + '"' + ((w['w6-' + i + '-k'] || '') === o ? ' selected' : '') + '>' + (o || '—') + '</option>';
+          }).join('') + '</select></div></div>';
+      }
+      inhoud += '<button class="knop knop-spook knop-vol" data-actie="wb-rij">' + ico('plus', 'icoon-klein') + ' Thema toevoegen</button>';
+    } else {
+      inhoud += b.rijen.map(function (r) {
+        return '<div class="glas vulling kolom" style="gap:8px;margin-bottom:10px"><strong>' + esc(r.label) + '</strong>' +
+          r.cellen.map(function (c) {
+            return c.veld
+              ? '<div class="veld"><label>' + esc(c.k) + '</label>' + wbVeld(c.veld, w, c.ph) + '</div>'
+              : '<div class="kolom" style="gap:2px"><span class="label-caps gedempt">' + esc(c.k) + '</span>' +
+                '<span class="body-sm">' + esc(c.v) + '</span></div>';
+          }).join('') + '</div>';
+      }).join('');
+      if (b.extra) inhoud += '<div class="veld"><label>' + esc(b.extra.k) + '</label>' + wbVeld(b.extra.veld, w, '', 4) + '</div>';
+    }
+    return '<details class="uitklap glas" style="margin-bottom:10px"' + (open ? ' open' : '') + '><summary>' +
+      '<span class="chip neutraal">' + b.id.slice(1) + '</span>' +
+      '<span style="flex:1">' + esc(b.titel) + '</span><span class="chevron">' + ico('chevron-down') + '</span></summary>' +
+      '<div class="inhoud">' + inhoud + '</div></details>';
+  }
+
+  function wbBladen() {
+    var natal = mijnHoroscoop();
+    var trs = A.transits(natal, nuJD()).filter(function (t) { return t.sterkte > 0.12; });
+    return WB.bouw(natal, AN.analyseer(natal), staat.profiel, trs);
+  }
+
+  schermen.werkbladen = function () {
+    var w = wbWaarden();
+    return '<section class="kolom opduiken" style="gap:10px;text-align:center">' +
+      '<h1 class="display goud">Werkbladen</h1>' +
+      '<p class="body-lg zacht">Zeven bladen om je analyse te ordenen. Wat de horoscoop al weet is ingevuld; ' +
+      'de duiding is aan jou.</p></section>' +
+      '<section class="opduiken">' + wbBladen().map(function (b, i) { return wbBlad(b, w, i === 0); }).join('') + '</section>' +
+      '<button class="knop knop-vol" data-actie="wb-export">' + ico('book', 'icoon-klein') + ' Werkbladen downloaden (.md)</button>' +
+      '<p class="hint">Wat je invult blijft alleen in deze browser bewaard, per persoon. ' +
+      'Met de download neem je het mee.</p>';
   };
 
   /* ---- detail van een punt ---- */
@@ -1376,6 +1446,7 @@
     var menu = [
       ['history', 'Mijn geboortegegevens', '#/gegevens/profiel', 'pencil'],
       ['analyse', 'Diepe analyse', '#/analyse', 'scale'],
+      ['werkbladen', 'Werkbladen', '#/werkbladen', 'pencil'],
       ['bewaard', 'Opgeslagen inzichten', '#/bewaard', 'bookmark'],
       ['relaties', 'Relaties', '#/match', 'users'],
       ['meldingen', 'Meldingen', '#/meldingen', 'bell'],
@@ -2021,6 +2092,19 @@
       ga('#/mijn-duiding');
     }
 
+    else if (actie === 'wb-rij') {
+      var wv = wbWaarden();
+      wv['w6-aantal'] = Math.max(3, +wv['w6-aantal'] || 3) + 1;
+      bewaren();
+      var openIds = Array.prototype.map.call(scherm.querySelectorAll('details'), function (d) { return d.open; });
+      render();
+      Array.prototype.forEach.call(scherm.querySelectorAll('details'), function (d, i) { d.open = openIds[i]; });
+    }
+
+    else if (actie === 'wb-export') {
+      download(bestandsNaam('werkbladen.md'), WB.markdown(wbBladen(), wbWaarden(), staat.profiel), 'text/markdown');
+    }
+
     else if (actie === 'analyse-rapport') {
       var nat = mijnHoroscoop();
       download(bestandsNaam('rapport.md'), AN.rapport(nat, AN.analyseer(nat), staat.profiel), 'text/markdown');
@@ -2120,6 +2204,11 @@
       if (opslaanKnop) {
         opslaanKnop.disabled = !(formulier.naam && formulier.datum && formulier.plaats);
       }
+    }
+    if (e.target.dataset.wb) {
+      wbWaarden()[e.target.dataset.wb] = e.target.value;
+      bewaren();
+      return;
     }
     if (veld === 'eigen') { eigenTekst = e.target.value; return; }
     if (veld === 'eigenBron') { eigenBron = e.target.value; return; }
