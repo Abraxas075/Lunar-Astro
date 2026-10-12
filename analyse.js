@@ -217,7 +217,20 @@
       });
     }
 
-    // Grote driehoek en T-vierkant
+    // Groot kruis: twee opposities die elkaar in vier vierkanten snijden
+    var kruisGezien = {};
+    TIEN.forEach(function (a) { TIEN.forEach(function (b) {
+      if (a >= b || !heeft(a, b, 'oppositie')) return;
+      TIEN.forEach(function (c) { TIEN.forEach(function (d) {
+        if (c >= d || c <= a || !heeft(c, d, 'oppositie')) return;
+        if (heeft(a, c, 'vierkant') && heeft(a, d, 'vierkant') && heeft(b, c, 'vierkant') && heeft(b, d, 'vierkant')) {
+          var sl = [a, b, c, d].sort().join();
+          if (!kruisGezien[sl]) { kruisGezien[sl] = 1; out.push({ soort: 'groot-kruis', punten: [a, b, c, d] }); }
+        }
+      }); });
+    }); });
+
+    // Grote driehoek, vlieger en T-vierkant
     var gezien = {};
     for (var i = 0; i < TIEN.length; i++) {
       for (var j = i + 1; j < TIEN.length; j++) {
@@ -226,6 +239,13 @@
           var c = TIEN[m];
           if (heeft(a, b, 'driehoek') && heeft(b, c, 'driehoek') && heeft(a, c, 'driehoek'))
             out.push({ soort: 'grote-driehoek', punten: [a, b, c] });
+          [[a, b, c], [b, a, c], [c, a, b]].forEach(function (t) {
+            TIEN.forEach(function (d) {
+              if (t.indexOf(d) >= 0 || !(heeft(a, b, 'driehoek') && heeft(b, c, 'driehoek') && heeft(a, c, 'driehoek'))) return;
+              if (heeft(t[0], d, 'oppositie') && heeft(t[1], d, 'sextiel') && heeft(t[2], d, 'sextiel'))
+                out.push({ soort: 'vlieger', punten: [a, b, c], punt: d });
+            });
+          });
         }
         if (heeft(a, b, 'oppositie')) {
           TIEN.forEach(function (c2) {
@@ -244,15 +264,16 @@
   function patroonTekst(pt) {
     var n = pt.punten.map(naamVan);
     if (pt.soort === 'stellium') return 'Stellium in ' + pt.plaats + ': ' + n.join(', ');
+    if (pt.soort === 'groot-kruis') return 'Groot kruis: ' + n.join(', ');
+    if (pt.soort === 'vlieger') return 'Vlieger: grote driehoek ' + n.join(', ') + ', met ' + naamVan(pt.punt) + ' als tegenpool';
     if (pt.soort === 'grote-driehoek') return 'Grote driehoek: ' + n.join(', ');
     return 'T-vierkant: ' + n[0] + ' ☍ ' + n[1] + ', met ' + naamVan(pt.brandpunt) + ' als brandpunt';
   }
 
-  var PATROON_UITLEG = {
-    'stellium': 'Veel energie op één plek: dit thema is een rode draad in je leven.',
-    'grote-driehoek': 'Een gesloten kring van talent. Het stroomt, maar kan ook lui maken.',
-    't-vierkant': 'Een spanning die om oplossing vraagt; het brandpunt is waar je actie onderneemt.'
-  };
+  function patroonUitleg(soort) {
+    var g = global.LunaGids && global.LunaGids.PATROON[soort];
+    return g ? g.betekenis + ' Sleutel: ' + g.sleutel : '';
+  }
 
   /* ---------- Markdown-rapport ---------- */
 
@@ -363,6 +384,8 @@
         (tb ? ', vooral op het gebied van ' + HUIS_DOMEIN[pk.huis - 1] : '') + '.';
       if (pk.retrograde && k !== 'zon' && k !== 'maan') zin += ' Retrograde: deze energie werkt meer naar binnen en wordt vaak later in het leven bewust.';
       if (w) zin += ' Waardigheid: ' + w.label.toLowerCase() + '.';
+      var g = global.LunaGids && global.LunaGids.PLANEET[k];
+      if (g) zin += ' Kracht: ' + g.kracht.toLowerCase() + '; schaduw: ' + g.schaduw.toLowerCase() + '.';
       r.push(zin + '\n');
     });
     r.push('### Belangrijkste aspecten\n');
@@ -440,7 +463,7 @@
 
   global.LunaAnalyse = {
     analyseer: analyseer, rapport: rapport, prompt: prompt,
-    patroonTekst: patroonTekst, PATROON_UITLEG: PATROON_UITLEG,
+    patroonTekst: patroonTekst, patroonUitleg: patroonUitleg,
     ELEMENTEN: ELEMENTEN, KWALITEITEN: KWALITEITEN, HUIS_DOMEIN: HUIS_DOMEIN,
     naamVan: naamVan, positieTekst: positieTekst
   };
