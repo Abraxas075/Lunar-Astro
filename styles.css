@@ -504,3 +504,56 @@ nav.onder a.actief {
   letter-spacing: .04em;
 }
 .duiding-inhoud tr:last-child td { border-bottom: 0; }
+
+/* ---------- rapport ---------- */
+
+.rapport {
+  background: rgba(255, 255, 255, .03);
+  border: 1px solid rgba(255, 255, 255, .08);
+  border-radius: var(--r-lg);
+  padding: 28px 22px;
+  display: flex; flex-direction: column; gap: 12px;
+}
+.rapport-kop { text-align: center; padding-bottom: 18px; border-bottom: 1px solid rgba(255, 255, 255, .1); }
+.rapport-kop .label-caps { color: var(--primary); }
+.rapport-kop h1 { font-family: var(--serif); font-size: 34px; line-height: 42px; margin: 6px 0; }
+.rapport-kop p { margin: 0; color: var(--on-surface-variant); }
+.rapport-kop .rapport-datum { font-size: 13px; color: var(--outline); margin-top: 6px; }
+.rapport-h1 { font-family: var(--serif); font-size: 26px; line-height: 34px; color: var(--primary); margin: 22px 0 2px; }
+.rapport-h2 { font-family: var(--serif); font-size: 19px; line-height: 26px; margin: 10px 0 0; }
+.rapport-p { margin: 0; line-height: 1.6; color: var(--on-surface-variant); }
+.rapport .aanzet { font-style: italic; }
+.rapport-kader {
+  padding: 16px 18px; border-radius: var(--r-md, 12px); line-height: 1.6;
+  border-left: 3px solid var(--primary); background: rgba(255, 224, 142, .07);
+}
+.rapport-kader.tip { border-left-color: var(--groen); background: rgba(183, 207, 154, .08); }
+.rapport-wiel { max-width: 360px; margin: 6px auto; width: 100%; }
+.rapport-tabel-wrap { overflow-x: auto; }
+.rapport-tabel { width: 100%; border-collapse: collapse; font-size: 14px; line-height: 1.45; }
+.rapport-tabel th { text-align: left; font-weight: 600; color: var(--primary); padding: 8px 10px 8px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, .16); }
+.rapport-tabel td { padding: 8px 10px 8px 0; border-bottom: 1px solid rgba(255, 255, 255, .06); vertical-align: top;
+  color: var(--on-surface-variant); }
+.rapport-bijschrift { margin: 6px 0 0; font-size: 12px; color: var(--outline); font-style: italic; }
+
+@media print {
+  @page { margin: 18mm 16mm; }
+  html, body { background: #fff !important; color: #1b1b1b !important; padding: 0 !important; }
+  header.top, nav.onder, #sterrenhemel, .geen-print, .melding { display: none !important; }
+  main { max-width: none !important; padding: 0 !important; margin: 0 !important; }
+  .opduiken { animation: none !important; opacity: 1 !important; transform: none !important; }
+  .rapport { background: none; border: 0; padding: 0; color: #1b1b1b; }
+  .rapport-kop { border-bottom-color: #ccc; }
+  .rapport-kop .label-caps, .rapport-h1, .rapport-tabel th { color: #7a5c00; }
+  .rapport-kop p, .rapport-p, .rapport-tabel td { color: #2a2a2a; }
+  .rapport-kader { background: #faf5e6; color: #1b1b1b; }
+  .rapport-kader.tip { background: #eef4e6; }
+  .rapport-tabel th { border-bottom-color: #999; }
+  .rapport-tabel td { border-bottom-color: #ddd; }
+  .rapport-h1 { break-after: avoid; page-break-after: avoid; }
+  .rapport-h2 { break-after: avoid; }
+  .rapport-tabel tr, .rapport-kader { break-inside: avoid; }
+  .rapport-wiel { background: #111417; border-radius: 16px; padding: 10px;
+    -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+}
